@@ -159,7 +159,7 @@
             <div class="input-item"><label>遊戲名稱</label><input type="text" id="lName" placeholder="ID"></div>
             <div class="input-item"><label>請假時間</label><input type="text" id="lTime" placeholder="例: 10/25 晚上"></div>
             <div class="input-item"><label>事由</label><input type="text" id="lReason" placeholder="原因"></div>
-            <button class="ro-btn" onclick="addLeave()">登錄假單</button>
+            <button class="ro-btn" onclick="addLeave()">手動登錄</button>
         </div>
 
         <table id="leaveTable">
@@ -173,13 +173,7 @@
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td>2024/01/28 20:00</td>
-                    <td>Alice01</td>
-                    <td>1/29 公會戰</td>
-                    <td>加班</td>
-                    <td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this)">刪除</button></td>
-                </tr>
+                <tr><td colspan="5" class="center-col">載入資料中...</td></tr>
             </tbody>
         </table>
     </div>
@@ -187,11 +181,54 @@
 </div>
 
 <script>
-    // 自動填入當前時間到假單輸入框
-    setInterval(() => {
-        let now = new Date();
-        document.getElementById("lSubTime").value = now.toLocaleString('zh-TW', { hour12: false });
-    }, 1000);
+    // ★ 設定資料來源網址 (已填入) ★
+    const DATA_SOURCE_URL = "https://script.google.com/macros/s/AKfycbyo_llFwKnrejzal9uO-csOAF2riIUg7Gx8kRRy4XMt8puqPWSp0QGFtIhyfTJGg3FtzQ/exec";
+
+    // 網頁載入時執行
+    window.onload = function() {
+        // 1. 自動抓取假單資料
+        fetchLeaveData();
+        
+        // 2. 啟動時間更新
+        setInterval(() => {
+            let now = new Date();
+            let timeField = document.getElementById("lSubTime");
+            if(timeField) timeField.value = now.toLocaleString('zh-TW', { hour12: false });
+        }, 1000);
+    };
+
+    // --- 從 Google Sheet 抓取資料 ---
+    function fetchLeaveData() {
+        fetch(DATA_SOURCE_URL)
+        .then(response => response.json())
+        .then(data => {
+            let tbody = document.getElementById("leaveTable").querySelector("tbody");
+            tbody.innerHTML = ""; // 清空目前的預設或載入中文字
+
+            // 檢查是否有資料
+            if (!data || data.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='5' class='center-col'>目前沒有假單</td></tr>";
+                return;
+            }
+
+            data.forEach(row => {
+                // 假設回傳格式為: [時間, ID, 請假時間, 事由]
+                let tr = tbody.insertRow();
+                tr.innerHTML = `
+                    <td>${row[0]}</td>
+                    <td contenteditable="true" class="editable">${row[1]}</td>
+                    <td contenteditable="true" class="editable">${row[2]}</td>
+                    <td contenteditable="true" class="editable">${row[3]}</td>
+                    <td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this)">刪除</button></td>
+                `;
+            });
+        })
+        .catch(error => {
+            console.error('讀取失敗:', error);
+            let tbody = document.getElementById("leaveTable").querySelector("tbody");
+            tbody.innerHTML = "<tr><td colspan='5' class='center-col' style='color:red;'>讀取失敗，請確認網路或權限設定</td></tr>";
+        });
+    }
 
     // --- 分頁切換功能 ---
     function openTab(tabName) {
@@ -228,7 +265,7 @@
         document.getElementById("mID").value = "";
     }
 
-    // --- 假單管理功能 ---
+    // --- 假單手動補登 (不會回寫到 Google Sheet) ---
     function addLeave() {
         let subTime = document.getElementById("lSubTime").value;
         let name = document.getElementById("lName").value;
@@ -237,7 +274,13 @@
         if(name === "") return alert("請輸入遊戲名稱");
 
         let tbody = document.getElementById("leaveTable").querySelector("tbody");
-        let row = tbody.insertRow();
+        
+        // 如果目前是"讀取失敗"或"無資料"的提示，先清空
+        if(tbody.rows.length === 1 && tbody.rows[0].cells.length < 5) {
+            tbody.innerHTML = ""; 
+        }
+
+        let row = tbody.insertRow(0); // 插入在第一行
         row.innerHTML = `
             <td>${subTime}</td>
             <td contenteditable="true" class="editable">${name}</td>
@@ -245,12 +288,14 @@
             <td contenteditable="true" class="editable">${reason}</td>
             <td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this)">刪除</button></td>
         `;
+        
         document.getElementById("lName").value = "";
         document.getElementById("lReason").value = "";
     }
 
     // 共用功能
     function deleteRow(btn) {
+        // 注意：此刪除僅為畫面暫時移除，不會刪除 Google Sheet 資料
         btn.closest("tr").remove();
     }
 
