@@ -31,63 +31,33 @@
             margin-top: 0;
         }
 
-        /* --- 分頁籤設計 (Tabs) --- */
-        .tab-container {
-            display: flex;
-            margin-bottom: 20px;
-            border-bottom: 2px solid #555;
-        }
+        /* --- 分頁籤設計 --- */
+        .tab-container { display: flex; margin-bottom: 20px; border-bottom: 2px solid #555; }
         .tab-btn {
-            padding: 10px 25px;
-            background: #2a2a2a;
-            border: 1px solid #555;
-            border-bottom: none;
-            color: #aaa;
-            cursor: pointer;
-            font-weight: bold;
-            border-radius: 5px 5px 0 0;
-            margin-right: 5px;
-            transition: 0.3s;
+            padding: 10px 25px; background: #2a2a2a; border: 1px solid #555; border-bottom: none;
+            color: #aaa; cursor: pointer; font-weight: bold; border-radius: 5px 5px 0 0; margin-right: 5px; transition: 0.3s;
         }
-        .tab-btn:hover {
-            background: #333;
-            color: #fff;
-        }
-        .tab-btn.active {
-            background: #4a90e2; /* 啟用色 */
-            color: #fff;
-            border-color: #8abeff;
-        }
+        .tab-btn:hover { background: #333; color: #fff; }
+        .tab-btn.active { background: #4a90e2; color: #fff; border-color: #8abeff; }
 
-        /* --- 內容區塊控制 --- */
-        .tab-content {
-            display: none; /* 預設隱藏 */
-            animation: fadeIn 0.5s;
-        }
-        .tab-content.active {
-            display: block; /* 啟用顯示 */
-        }
-        @keyframes fadeIn {
-            from { opacity: 0; } to { opacity: 1; }
-        }
+        /* --- 內容區塊 --- */
+        .tab-content { display: none; animation: fadeIn 0.5s; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
         /* --- 輸入區與按鈕 --- */
         .input-group {
             display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
-            margin-bottom: 20px; padding: 15px;
-            background: rgba(0, 0, 0, 0.3); border-radius: 8px;
+            margin-bottom: 20px; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px;
         }
         .input-item { display: flex; flex-direction: column; }
         label { font-size: 0.8em; color: #aaa; margin-bottom: 5px; }
-        input[type="text"], input[type="datetime-local"], select {
-            padding: 8px; background: #2a2a2a; border: 1px solid #555;
-            color: #fff; border-radius: 4px; outline: none;
+        input[type="text"], select {
+            padding: 8px; background: #2a2a2a; border: 1px solid #555; color: #fff; border-radius: 4px; outline: none;
         }
         .ro-btn {
-            padding: 8px 20px;
-            background: linear-gradient(180deg, #4a90e2, #0056b3);
-            color: white; border: 1px solid #8abeff; border-radius: 4px;
-            cursor: pointer; font-weight: bold; align-self: flex-end;
+            padding: 8px 20px; background: linear-gradient(180deg, #4a90e2, #0056b3);
+            color: white; border: 1px solid #8abeff; border-radius: 4px; cursor: pointer; font-weight: bold; align-self: flex-end;
         }
         .ro-btn:hover { filter: brightness(1.1); }
         .btn-delete { background: linear-gradient(180deg, #c0392b, #8e2a20); border-color: #e74c3c; }
@@ -95,19 +65,15 @@
         /* --- 表格樣式 --- */
         table { width: 100%; border-collapse: separate; border-spacing: 0; margin-top: 10px; color: #ddd; }
         th {
-            background: linear-gradient(180deg, #3d3d3d, #222);
-            color: #ffde9e; padding: 12px; cursor: pointer;
+            background: linear-gradient(180deg, #3d3d3d, #222); color: #ffde9e; padding: 12px; cursor: pointer;
             border-bottom: 2px solid #cfaa70; text-align: left;
         }
         td { padding: 12px; border-bottom: 1px solid #444; background: rgba(0, 0, 0, 0.2); }
         .editable { cursor: text; }
         .editable:focus { background: #000; border: 1px solid #cfaa70; outline: none; }
-        
-        /* 特殊欄位 */
         .force-yes { color: #ff6b6b; font-weight: bold; cursor: pointer; }
         .force-no { color: #888; cursor: pointer; }
         .center-col { text-align: center; }
-
     </style>
 </head>
 <body>
@@ -117,7 +83,7 @@
 
     <div class="tab-container">
         <button class="tab-btn active" onclick="openTab('memberTab')">成員名單</button>
-        <button class="tab-btn" onclick="openTab('leaveTab')">假單管理</button>
+        <button class="tab-btn" onclick="openTab('leaveTab')">假單管理 (連線中)</button>
     </div>
 
     <div id="memberTab" class="tab-content active">
@@ -155,7 +121,7 @@
 
     <div id="leaveTab" class="tab-content">
         <div class="input-group">
-            <div class="input-item"><label>填單時間 (傳送時間)</label><input type="text" id="lSubTime" value="" readonly style="background:#444; color:#999;"></div>
+            <div class="input-item"><label>填單時間</label><input type="text" id="lSubTime" value="" readonly style="background:#444; color:#999;"></div>
             <div class="input-item"><label>遊戲名稱</label><input type="text" id="lName" placeholder="ID"></div>
             <div class="input-item"><label>請假時間</label><input type="text" id="lTime" placeholder="例: 10/25 晚上"></div>
             <div class="input-item"><label>事由</label><input type="text" id="lReason" placeholder="原因"></div>
@@ -173,20 +139,18 @@
                 </tr>
             </thead>
             <tbody>
-                <tr><td colspan="5" class="center-col">載入資料中...</td></tr>
+                <tr><td colspan="5" class="center-col">資料讀取中...</td></tr>
             </tbody>
         </table>
     </div>
-
 </div>
 
 <script>
-    // ★ 設定資料來源網址 (已填入) ★
+    // 正確的資料來源網址
     const DATA_SOURCE_URL = "https://script.google.com/macros/s/AKfycbyo_llFwKnrejzal9uO-csOAF2riIUg7Gx8kRRy4XMt8puqPWSp0QGFtIhyfTJGg3FtzQ/exec";
 
-    // 網頁載入時執行
     window.onload = function() {
-        // 1. 自動抓取假單資料
+        // 1. 抓取假單資料
         fetchLeaveData();
         
         // 2. 啟動時間更新
@@ -197,22 +161,20 @@
         }, 1000);
     };
 
-    // --- 從 Google Sheet 抓取資料 ---
     function fetchLeaveData() {
+        // GET 請求不可以使用 no-cors，否則讀不到內容
         fetch(DATA_SOURCE_URL)
         .then(response => response.json())
         .then(data => {
             let tbody = document.getElementById("leaveTable").querySelector("tbody");
-            tbody.innerHTML = ""; // 清空目前的預設或載入中文字
+            tbody.innerHTML = ""; 
 
-            // 檢查是否有資料
             if (!data || data.length === 0) {
                 tbody.innerHTML = "<tr><td colspan='5' class='center-col'>目前沒有假單</td></tr>";
                 return;
             }
 
             data.forEach(row => {
-                // 假設回傳格式為: [時間, ID, 請假時間, 事由]
                 let tr = tbody.insertRow();
                 tr.innerHTML = `
                     <td>${row[0]}</td>
@@ -226,26 +188,20 @@
         .catch(error => {
             console.error('讀取失敗:', error);
             let tbody = document.getElementById("leaveTable").querySelector("tbody");
-            tbody.innerHTML = "<tr><td colspan='5' class='center-col' style='color:red;'>讀取失敗，請確認網路或權限設定</td></tr>";
+            tbody.innerHTML = "<tr><td colspan='5' class='center-col' style='color:#ff6b6b;'>讀取失敗，請確認 Apps Script 是否已發布為新版本</td></tr>";
         });
     }
 
-    // --- 分頁切換功能 ---
     function openTab(tabName) {
         var i, tabcontent, tabbtns;
         tabcontent = document.getElementsByClassName("tab-content");
-        for (i = 0; i < tabcontent.length; i++) {
-            tabcontent[i].classList.remove("active");
-        }
+        for (i = 0; i < tabcontent.length; i++) { tabcontent[i].classList.remove("active"); }
         tabbtns = document.getElementsByClassName("tab-btn");
-        for (i = 0; i < tabbtns.length; i++) {
-            tabbtns[i].classList.remove("active");
-        }
+        for (i = 0; i < tabbtns.length; i++) { tabbtns[i].classList.remove("active"); }
         document.getElementById(tabName).classList.add("active");
         event.currentTarget.classList.add("active");
     }
 
-    // --- 成員管理功能 ---
     function addMember() {
         let id = document.getElementById("mID").value;
         let job = document.getElementById("mJob").value;
@@ -255,17 +211,10 @@
 
         let tbody = document.getElementById("guildTable").querySelector("tbody");
         let row = tbody.insertRow();
-        row.innerHTML = `
-            <td contenteditable="true" class="editable">${id}</td>
-            <td contenteditable="true" class="editable">${job}</td>
-            <td class="center-col" onclick="toggleForce(this)"><span class="${force==='是'?'force-yes':'force-no'}">${force}</span></td>
-            <td contenteditable="true" class="editable">${note}</td>
-            <td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this)">移除</button></td>
-        `;
+        row.innerHTML = `<td contenteditable="true" class="editable">${id}</td><td contenteditable="true" class="editable">${job}</td><td class="center-col" onclick="toggleForce(this)"><span class="${force==='是'?'force-yes':'force-no'}">${force}</span></td><td contenteditable="true" class="editable">${note}</td><td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this)">移除</button></td>`;
         document.getElementById("mID").value = "";
     }
 
-    // --- 假單手動補登 (不會回寫到 Google Sheet) ---
     function addLeave() {
         let subTime = document.getElementById("lSubTime").value;
         let name = document.getElementById("lName").value;
@@ -274,66 +223,36 @@
         if(name === "") return alert("請輸入遊戲名稱");
 
         let tbody = document.getElementById("leaveTable").querySelector("tbody");
-        
-        // 如果目前是"讀取失敗"或"無資料"的提示，先清空
-        if(tbody.rows.length === 1 && tbody.rows[0].cells.length < 5) {
-            tbody.innerHTML = ""; 
-        }
+        if(tbody.rows.length === 1 && tbody.rows[0].cells.length < 5) { tbody.innerHTML = ""; }
 
-        let row = tbody.insertRow(0); // 插入在第一行
-        row.innerHTML = `
-            <td>${subTime}</td>
-            <td contenteditable="true" class="editable">${name}</td>
-            <td contenteditable="true" class="editable">${time}</td>
-            <td contenteditable="true" class="editable">${reason}</td>
-            <td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this)">刪除</button></td>
-        `;
-        
+        let row = tbody.insertRow(0);
+        row.innerHTML = `<td>${subTime}</td><td contenteditable="true" class="editable">${name}</td><td contenteditable="true" class="editable">${time}</td><td contenteditable="true" class="editable">${reason}</td><td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this)">刪除</button></td>`;
         document.getElementById("lName").value = "";
         document.getElementById("lReason").value = "";
     }
 
-    // 共用功能
-    function deleteRow(btn) {
-        // 注意：此刪除僅為畫面暫時移除，不會刪除 Google Sheet 資料
-        btn.closest("tr").remove();
-    }
-
+    function deleteRow(btn) { btn.closest("tr").remove(); }
+    
     function toggleForce(td) {
         let span = td.querySelector("span");
-        if (span.innerText === "是") {
-            span.innerText = "否"; span.className = "force-no";
-        } else {
-            span.innerText = "是"; span.className = "force-yes";
-        }
+        if (span.innerText === "是") { span.innerText = "否"; span.className = "force-no"; } else { span.innerText = "是"; span.className = "force-yes"; }
     }
 
     function sortTable(tableId, n) {
         var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
         table = document.getElementById(tableId);
-        switching = true;
-        dir = "asc"; 
+        switching = true; dir = "asc";
         while (switching) {
-            switching = false;
-            rows = table.rows;
+            switching = false; rows = table.rows;
             for (i = 1; i < (rows.length - 1); i++) {
                 shouldSwitch = false;
                 x = rows[i].getElementsByTagName("TD")[n];
                 y = rows[i + 1].getElementsByTagName("TD")[n];
-                let xVal = x.innerText.toLowerCase();
-                let yVal = y.innerText.toLowerCase();
-                if (dir == "asc") {
-                    if (xVal > yVal) { shouldSwitch = true; break; }
-                } else if (dir == "desc") {
-                    if (xVal < yVal) { shouldSwitch = true; break; }
-                }
+                if (dir == "asc") { if (x.innerText.toLowerCase() > y.innerText.toLowerCase()) { shouldSwitch = true; break; } }
+                else if (dir == "desc") { if (x.innerText.toLowerCase() < y.innerText.toLowerCase()) { shouldSwitch = true; break; } }
             }
-            if (shouldSwitch) {
-                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                switching = true; switchcount++;
-            } else {
-                if (switchcount == 0 && dir == "asc") { dir = "desc"; switching = true; }
-            }
+            if (shouldSwitch) { rows[i].parentNode.insertBefore(rows[i + 1], rows[i]); switching = true; switchcount++; }
+            else { if (switchcount == 0 && dir == "asc") { dir = "desc"; switching = true; } }
         }
     }
 </script>
