@@ -3,58 +3,177 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RO 工會假單填寫</title>
+    <title>RO 工會假單系統</title>
     <style>
-        body { font-family: "Microsoft JhengHei", sans-serif; background: #1a1a1a; color: #e0e0e0; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-        .form-box { background: rgba(30, 30, 30, 0.95); border: 2px solid #cfaa70; padding: 30px; border-radius: 10px; width: 300px; text-align: center; }
-        h2 { color: #ffde9e; border-bottom: 1px solid #cfaa70; padding-bottom: 10px; }
-        input { width: 90%; padding: 10px; margin: 10px 0; background: #2a2a2a; border: 1px solid #555; color: #fff; border-radius: 4px; }
-        button { width: 100%; padding: 10px; background: linear-gradient(180deg, #4a90e2, #0056b3); color: white; border: 1px solid #8abeff; cursor: pointer; font-weight: bold; border-radius: 4px; margin-top: 10px; }
-        button:hover { filter: brightness(1.1); }
-        button:disabled { background: #555; cursor: not-allowed; }
+        body { font-family: "Microsoft JhengHei", sans-serif; background: #1a1a1a; color: #e0e0e0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+        .form-box { background: rgba(30, 30, 30, 0.95); border: 2px solid #cfaa70; padding: 30px; border-radius: 10px; width: 320px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h2 { color: #ffde9e; border-bottom: 2px solid #cfaa70; padding-bottom: 10px; margin-top: 0; text-align: center; }
+        .input-group { text-align: left; margin-bottom: 15px; }
+        label { display: block; font-size: 0.9em; color: #cfaa70; margin-bottom: 5px; font-weight: bold; }
+        
+        /* 輸入框與選單樣式 */
+        input[type="text"], select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #555; color: #fff; border-radius: 4px; box-sizing: border-box; }
+        input:focus, select:focus { border-color: #4a90e2; outline: none; }
+        
+        /* 日期選項容器 */
+        .date-container { background: #222; padding: 10px; border: 1px solid #444; border-radius: 4px; max-height: 200px; overflow-y: auto; }
+        .date-option { display: flex; align-items: center; margin-bottom: 8px; cursor: pointer; }
+        .date-option:last-child { margin-bottom: 0; }
+        .date-option input { width: auto; margin-right: 10px; transform: scale(1.2); }
+        .date-option span { color: #fff; }
+
+        button { width: 100%; padding: 12px; background: linear-gradient(180deg, #4a90e2, #0056b3); color: white; border: 1px solid #8abeff; cursor: pointer; font-weight: bold; border-radius: 4px; margin-top: 10px; transition: 0.3s; }
+        button:hover { filter: brightness(1.1); box-shadow: 0 0 10px rgba(74,144,226,0.5); }
+        button:disabled { background: #555; cursor: not-allowed; border: none; }
     </style>
 </head>
 <body>
 
 <div class="form-box">
     <h2>✦ 假單傳送 ✦</h2>
-    <input type="text" id="mName" placeholder="遊戲名稱 (必填)">
-    <input type="text" id="mTime" placeholder="請假時間 (例: 1/29 晚上)">
-    <input type="text" id="mReason" placeholder="事由 (例: 加班)">
-    <button id="submitBtn" onclick="sendData()">傳送假單</button>
+    
+    <div class="input-group">
+        <label>遊戲角色名稱 <span style="color:red">*</span></label>
+        <input type="text" id="mName" placeholder="請輸入遊戲 ID">
+    </div>
+
+    <div class="input-group">
+        <label>請假日期 (至本週日) <span style="color:red">*</span></label>
+        <div id="dateList" class="date-container">
+            </div>
+        <small id="dateHint" style="color: #888; font-size: 0.8em;"></small>
+    </div>
+
+    <div class="input-group">
+        <label>事由 <span style="color:red">*</span></label>
+        <select id="mReason">
+            <option value="" disabled selected>請選擇事由</option>
+            <option value="加班">加班</option>
+            <option value="顧小孩">顧小孩</option>
+            <option value="出遊">出遊</option>
+            <option value="其他">其他</option>
+        </select>
+    </div>
+
+    <div class="input-group">
+        <label>備註 (選填)</label>
+        <input type="text" id="mNote" placeholder="例如：晚上 9 點後可上線">
+    </div>
+
+    <button id="submitBtn" onclick="sendData()">確認傳送假單</button>
 </div>
 
 <script>
-    // 正確的資料傳送網址
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyo_llFwKnrejzal9uO-csOAF2riIUg7Gx8kRRy4XMt8puqPWSp0QGFtIhyfTJGg3FtzQ/exec"; 
 
-    function sendData() {
-        let name = document.getElementById("mName").value;
-        let time = document.getElementById("mTime").value;
-        let reason = document.getElementById("mReason").value;
-        let btn = document.getElementById("submitBtn");
+    // 初始化日期選單
+    window.onload = function() {
+        generateDateOptions();
+    };
 
+    function generateDateOptions() {
+        const container = document.getElementById("dateList");
+        const hint = document.getElementById("dateHint");
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0(日) - 6(六)
+        
+        // 邏輯：如果是週一(1)，開放複選；其他日子也開放複選以保留彈性
+        // 若要嚴格限制非週一只能單選，可修改 input type
+        const isMonday = (dayOfWeek === 1);
+        const inputType = "checkbox"; // 統一使用 checkbox 方便操作
+
+        if (isMonday) {
+            hint.innerText = "今天是週一，您可以一次勾選本週多個日期。";
+        } else {
+            hint.innerText = "請勾選您需要請假的日期。";
+        }
+
+        // 計算距離本週日還有幾天 (週日 index 為 0，視為下週的開始或是本週結束，這裡設週日為 7 方便計算)
+        // 轉換：日(0)->7, 一(1)->1, ..., 六(6)->6
+        let currentDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
+        let daysUntilSunday = 7 - currentDayIndex;
+
+        if (daysUntilSunday <= 0) {
+            container.innerHTML = "<div style='color:#888; text-align:center;'>本週已無剩餘天數</div>";
+            return;
+        }
+
+        // 從明天開始生成選項
+        for (let i = 1; i <= daysUntilSunday; i++) {
+            let targetDate = new Date(today);
+            targetDate.setDate(today.getDate() + i);
+
+            let m = targetDate.getMonth() + 1;
+            let d = targetDate.getDate();
+            let w = targetDate.getDay(); // 0-6
+            let wStr = ["日", "一", "二", "三", "四", "五", "六"][w];
+
+            let dateString = `${m}/${d} (${wStr})`; // 顯示格式 2/3 (二)
+            
+            // 建立 HTML 結構
+            let div = document.createElement("label");
+            div.className = "date-option";
+            
+            let input = document.createElement("input");
+            input.type = inputType;
+            input.name = "leaveDate";
+            input.value = dateString;
+
+            // 如果非週一且想要嚴格單選，需加入 name 屬性與 radio 行為 (目前保留 checkbox)
+            // if (!isMonday) input.type = "radio"; 
+
+            let span = document.createElement("span");
+            span.innerText = dateString;
+
+            div.appendChild(input);
+            div.appendChild(span);
+            container.appendChild(div);
+        }
+    }
+
+    function sendData() {
+        const name = document.getElementById("mName").value.trim();
+        const reasonSelect = document.getElementById("mReason");
+        const reason = reasonSelect.value;
+        const note = document.getElementById("mNote").value.trim();
+        const btn = document.getElementById("submitBtn");
+
+        // 取得勾選的日期
+        const checkboxes = document.querySelectorAll('input[name="leaveDate"]:checked');
+        let selectedDates = [];
+        checkboxes.forEach((cb) => {
+            selectedDates.push(cb.value);
+        });
+
+        // 驗證
         if(!name) return alert("請輸入遊戲名稱");
+        if(selectedDates.length === 0) return alert("請至少選擇一個請假日期");
+        if(!reason) return alert("請選擇請假事由");
+
+        // 組合最終傳送字串
+        const finalReason = note ? `${reason} (${note})` : reason;
+        const finalTime = selectedDates.join(", "); // 將日期用逗號串接
 
         btn.innerText = "傳送中...";
         btn.disabled = true;
 
         fetch(SCRIPT_URL, {
             method: 'POST',
-            mode: 'no-cors', // 傳送資料必須使用 no-cors
+            mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: name, leaveTime: time, reason: reason })
+            body: JSON.stringify({ 
+                name: name, 
+                leaveTime: finalTime, // 這裡會傳送如 "1/30 (五), 1/31 (六)"
+                reason: finalReason 
+            })
         }).then(() => {
             alert("假單已傳送！");
-            document.getElementById("mName").value = "";
-            document.getElementById("mTime").value = "";
-            document.getElementById("mReason").value = "";
-            btn.innerText = "傳送假單";
-            btn.disabled = false;
+            location.reload(); // 重新整理頁面以重置表單
         }).catch(err => {
             alert("傳送失敗，請通知會長。");
             console.error(err);
             btn.disabled = false;
+            btn.innerText = "確認傳送假單";
         });
     }
 </script>
