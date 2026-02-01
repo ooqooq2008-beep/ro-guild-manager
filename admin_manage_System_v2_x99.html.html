@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RO 工會管理系統 - 雲端版 (Fixed)</title>
+    <title>RO 工會管理系統 - 雲端版 (V2)</title>
     <style>
         /* --- 全域與 RO 風格 --- */
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #1a1a1a; background-image: radial-gradient(circle, #2c3e50, #000000); color: #e0e0e0; margin: 20px; }
@@ -17,16 +17,23 @@
         .tab-content { display: none; animation: fadeIn 0.3s; }
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        .input-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px; align-items: flex-end; }
+        
+        /* 輸入區塊樣式 */
+        .input-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px; align-items: flex-end; border: 1px solid #444; }
         .input-item { display: flex; flex-direction: column; }
         label { font-size: 0.8em; color: #aaa; margin-bottom: 5px; }
         input[type="text"], input[type="number"], select { padding: 8px; background: #2a2a2a; border: 1px solid #555; color: #fff; border-radius: 4px; outline: none; }
         .force-input { width: 60px; text-align: center; background: #111; border: 1px solid #555; color: #ffde9e; font-weight: bold; }
-        .ro-btn { padding: 8px 20px; background: linear-gradient(180deg, #4a90e2, #0056b3); color: white; border: 1px solid #8abeff; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        
+        /* 按鈕樣式 */
+        .ro-btn { padding: 8px 20px; background: linear-gradient(180deg, #4a90e2, #0056b3); color: white; border: 1px solid #8abeff; border-radius: 4px; cursor: pointer; font-weight: bold; min-width: 80px; }
         .ro-btn:hover { filter: brightness(1.1); }
+        .ro-btn:disabled { background: #555; border-color: #444; color: #888; cursor: not-allowed; }
         .btn-delete { background: linear-gradient(180deg, #c0392b, #8e2a20); border-color: #e74c3c; }
         .btn-add-team { background: linear-gradient(180deg, #2ecc71, #27ae60); border-color: #2ecc71; margin-bottom: 10px;}
         .btn-move { padding: 2px 8px; background: #333; border: 1px solid #555; color: #fff; font-size: 0.8em; cursor: pointer; }
+        .btn-submit-leave { background: linear-gradient(180deg, #f39c12, #d35400); border-color: #e67e22; color: #000; }
+        
         .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 15px; padding: 10px; border-bottom: 1px solid #444; }
         .filter-btn { padding: 5px 12px; border: 1px solid #555; background: #222; color: #888; border-radius: 15px; cursor: pointer; font-size: 0.9em; transition: 0.2s; }
         .filter-btn.active { background: #cfaa70; color: #000; font-weight: bold; border-color: #fff; }
@@ -37,6 +44,24 @@
         .editable:focus { background: #000; border: 1px solid #cfaa70; outline: none; }
         .center-col { text-align: center; }
         .job-text { font-weight: bold; text-shadow: 1px 1px 2px #000; }
+        
+        /* 假單專用 */
+        .leave-dashboard { display: flex; gap: 20px; min-height: 500px; margin-top: 10px; }
+        .leave-date-list { flex: 1; background: rgba(0,0,0,0.3); border-right: 1px solid #444; padding: 10px; overflow-y: auto; max-height: 600px; }
+        .date-btn { width: 100%; text-align: left; padding: 12px; margin-bottom: 8px; background: #2a2a2a; border: 1px solid #444; color: #ddd; cursor: pointer; border-radius: 4px; transition: 0.2s; display: flex; justify-content: space-between; }
+        .date-btn:hover { background: #333; border-color: #888; }
+        .date-btn.active { background: #4a90e2; color: white; border-color: #8abeff; font-weight: bold; }
+        .date-count { background: #c0392b; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.8em; }
+        .leave-detail-panel { flex: 3; padding: 10px; background: rgba(30,30,30,0.5); overflow-y: auto; max-height: 600px; }
+        .leave-card-v4 { display: flex; align-items: center; justify-content: space-between; background: #222; border: 1px solid #444; border-left: 4px solid #555; padding: 15px; margin-bottom: 10px; border-radius: 4px; }
+        .leave-job-badge { width: 80px; text-align: center; font-weight: bold; padding: 4px; border-radius: 4px; color: #000; margin-right: 15px; }
+        .leave-name { font-size: 1.2em; font-weight: bold; width: 150px; }
+        .leave-reason { color: #aaa; font-style: italic; flex-grow: 1; }
+        .leave-force { color: #f1c40f; font-weight: bold; margin-left: 10px; font-size: 0.9em; }
+        .error-box { padding: 20px; text-align: center; border: 1px dashed #e74c3c; color: #e74c3c; margin: 20px; display: none; }
+        .time-cell { font-family: monospace; color: #8abeff; font-size: 0.9em; }
+        
+        /* 小隊區塊 */
         .activity-container { display: flex; gap: 20px; height: 600px; }
         .standby-panel { flex: 1; background: rgba(0, 0, 0, 0.3); border: 1px solid #555; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; }
         .standby-list-content { overflow-y: auto; flex-grow: 1; }
@@ -55,26 +80,12 @@
         .squad-member { display: flex; justify-content: space-between; padding: 5px; border-bottom: 1px dashed #444; font-size: 0.9em; }
         .remove-icon { color: #e74c3c; cursor: pointer; font-weight: bold; margin-left: 5px; }
         .delete-tab-hint { font-size: 0.8em; color: #555; margin-left: 10px;}
-        .leave-dashboard { display: flex; gap: 20px; min-height: 500px; }
-        .leave-date-list { flex: 1; background: rgba(0,0,0,0.3); border-right: 1px solid #444; padding: 10px; overflow-y: auto; }
-        .date-btn { width: 100%; text-align: left; padding: 12px; margin-bottom: 8px; background: #2a2a2a; border: 1px solid #444; color: #ddd; cursor: pointer; border-radius: 4px; transition: 0.2s; display: flex; justify-content: space-between; }
-        .date-btn:hover { background: #333; border-color: #888; }
-        .date-btn.active { background: #4a90e2; color: white; border-color: #8abeff; font-weight: bold; }
-        .date-count { background: #c0392b; color: white; padding: 2px 6px; border-radius: 10px; font-size: 0.8em; }
-        .leave-detail-panel { flex: 3; padding: 10px; background: rgba(30,30,30,0.5); }
-        .leave-card-v4 { display: flex; align-items: center; justify-content: space-between; background: #222; border: 1px solid #444; border-left: 4px solid #555; padding: 15px; margin-bottom: 10px; border-radius: 4px; }
-        .leave-job-badge { width: 80px; text-align: center; font-weight: bold; padding: 4px; border-radius: 4px; color: #000; margin-right: 15px; }
-        .leave-name { font-size: 1.2em; font-weight: bold; width: 150px; }
-        .leave-reason { color: #aaa; font-style: italic; flex-grow: 1; }
-        .leave-force { color: #f1c40f; font-weight: bold; margin-left: 10px; font-size: 0.9em; }
-        .error-box { padding: 20px; text-align: center; border: 1px dashed #e74c3c; color: #e74c3c; margin: 20px; display: none; }
-        .time-cell { font-family: monospace; color: #8abeff; font-size: 0.9em; }
     </style>
 </head>
 <body>
 
 <div class="ro-panel">
-    <h2>✦ RO 工會管理系統 (雲端版) ✦</h2>
+    <h2>✦ RO 工會管理系統 (雲端版 v2) ✦</h2>
 
     <div class="tab-container" id="tabContainer">
         <button class="tab-btn active" id="btn-memberTab" onclick="openTab('memberTab')">成員名單</button>
@@ -107,11 +118,27 @@
     </div>
 
     <div id="leaveTab" class="tab-content">
+        <div class="input-group" style="background: rgba(44, 62, 80, 0.6); border-color: #555;">
+            <div class="input-item">
+                <label>選擇成員 (請先建立名單)</label>
+                <select id="leaveMemberSelect" style="width: 150px;"><option>載入中...</option></select>
+            </div>
+            <div class="input-item">
+                <label>請假日期/時間</label>
+                <input type="text" id="leaveTime" placeholder="例: 2/3 晚上, 2/4 全天" style="width: 180px;">
+            </div>
+            <div class="input-item">
+                <label>事由</label>
+                <input type="text" id="leaveReason" placeholder="例: 加班, 聚餐" style="width: 150px;">
+            </div>
+            <button class="ro-btn btn-submit-leave" id="btnSubmitLeave" onclick="submitLeave()">提交假單</button>
+        </div>
+
         <div id="loadingBox" style="text-align:center; padding: 20px; color: #aaa;">資料連線中...</div>
         <div id="errorBox" class="error-box">
-            無法讀取線上資料。<br>
-            <button class="ro-btn" style="margin-top:10px;" onclick="loadDemoLeaveData()">載入測試資料</button>
+            無法讀取線上資料。<br>請確認 Apps Script 網址是否正確。
         </div>
+        
         <div class="leave-dashboard" id="leaveDashboard" style="display:none;">
             <div class="leave-date-list" id="leaveDateList"></div>
             <div class="leave-detail-panel">
@@ -119,11 +146,12 @@
                 <div id="leaveDetailContainer"></div>
             </div>
         </div>
+
         <div style="margin-top: 20px; text-align: right;">
-            <button class="ro-btn btn-delete" style="font-size: 0.8em;" onclick="toggleRawLeaveData()">原始資料表 (可刪除)</button>
+            <button class="ro-btn btn-delete" style="font-size: 0.8em;" onclick="toggleRawLeaveData()">顯示原始資料表</button>
         </div>
         <div id="rawLeaveTableContainer" style="display:none; margin-top:10px;">
-             <table id="leaveTable"><thead><tr><th>填單時間</th><th>ID</th><th>請假時間</th><th>事由</th><th class="center-col">管理</th></tr></thead><tbody></tbody></table>
+             <table id="leaveTable"><thead><tr><th>系統時間</th><th>ID</th><th>請假時間</th><th>事由</th></tr></thead><tbody></tbody></table>
         </div>
     </div>
     
@@ -132,8 +160,8 @@
 </div>
 
 <script>
-    // ▼▼▼ 請將此處替換為你 Apps Script 部署後的網址 ▼▼▼
-    const DATA_SOURCE_URL = "https://script.google.com/macros/library/d/1U-TT6nZYAKRk0l4zPvzfX3Vyi_L1I-IIa1NFciVjMFfR6P_DN7hj2WPt/2";
+    // ▼▼▼ 請務必將此處替換為您更新並「部署新版本」後的 Apps Script 網址 ▼▼▼
+    const DATA_SOURCE_URL = "https://script.google.com/macros/s/AKfycbyo_llFwKnrejzal9uO-csOAF2riIUg7Gx8kRRy4XMt8puqPWSp0QGFtIhyfTJGg3FtzQ/exec";
     // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
     const JOB_DATA = {
@@ -149,11 +177,69 @@
 
     window.onload = function() {
         initJobUI();      
-        loadAllData();
-        fetchLeaveData();
+        loadAllData(); // 讀取本地成員
+        fetchLeaveData(); // 讀取雲端假單
     };
 
-    // --- 活動分頁邏輯 ---
+    // --- 假單提交邏輯 (新增) ---
+    function updateLeaveMemberSelect() {
+        let select = document.getElementById("leaveMemberSelect");
+        select.innerHTML = "";
+        let members = getMembersFromTable();
+        if (members.length === 0) {
+            select.innerHTML = "<option>無成員資料</option>";
+            return;
+        }
+        members.forEach(m => {
+            let op = document.createElement("option");
+            op.value = m.id;
+            op.text = m.id + " (" + m.job + ")";
+            select.appendChild(op);
+        });
+    }
+
+    function submitLeave() {
+        let name = document.getElementById("leaveMemberSelect").value;
+        let time = document.getElementById("leaveTime").value.trim();
+        let reason = document.getElementById("leaveReason").value.trim();
+        
+        if(!name || name === "無成員資料") return alert("請先在成員名單分頁建立成員！");
+        if(!time) return alert("請輸入請假時間");
+        
+        let btn = document.getElementById("btnSubmitLeave");
+        let originalText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = "傳送中...";
+
+        fetch(DATA_SOURCE_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                type: "SAVE_LEAVE",
+                name: name,
+                time: time,
+                reason: reason
+            })
+        }).then(() => {
+            // 因 no-cors 模式無法得知回傳，這裡做延遲重新讀取
+            setTimeout(() => {
+                alert("假單已送出！");
+                document.getElementById("leaveTime").value = "";
+                document.getElementById("leaveReason").value = "";
+                btn.disabled = false;
+                btn.innerText = originalText;
+                fetchLeaveData(); // 重新整理假單列表
+            }, 1000);
+        }).catch(err => {
+            console.error(err);
+            alert("傳送失敗，請檢查網路或 Apps Script 設定");
+            btn.disabled = false;
+            btn.innerText = originalText;
+        });
+    }
+
+    // --- 核心邏輯 ---
     function createNewActivityTab(defaultName = null) {
         let name = defaultName;
         if (!name) { name = prompt("新活動名稱:"); if (!name) return; }
@@ -205,26 +291,16 @@
     }
 
     function refreshStandbyList(listId, tabId) {
-        let listDiv = document.getElementById(listId); 
-        if (!listDiv) return;
+        let listDiv = document.getElementById(listId); if (!listDiv) return;
         listDiv.innerHTML = "";
-        
-        let filterSelect = document.getElementById(`filter_${tabId}`);
-        let sortCheck = document.getElementById(`sort_${tabId}`);
-        
-        let filterJob = filterSelect ? filterSelect.value : "All";
-        let sortByForce = sortCheck ? sortCheck.checked : false;
+        let filterJob = document.getElementById(`filter_${tabId}`).value;
+        let sortByForce = document.getElementById(`sort_${tabId}`).checked;
 
         let members = [];
         let rows = document.getElementById("guildTable").querySelectorAll("tbody tr");
         rows.forEach(r => {
             let forceInput = r.querySelector(".force-input");
-            members.push({ 
-                id: r.cells[0].innerText, 
-                job: r.cells[1].innerText, 
-                force: forceInput ? parseFloat(forceInput.value || 0) : 0, 
-                note: r.cells[3].innerText 
-            });
+            members.push({ id: r.cells[0].innerText, job: r.cells[1].innerText, force: forceInput ? parseFloat(forceInput.value || 0) : 0, note: r.cells[3].innerText });
         });
 
         if (filterJob !== "All") members = members.filter(m => m.job === filterJob);
@@ -262,11 +338,9 @@
     }
 
     function createSquadDOM(containerId, sqId, name) {
-        let container = document.getElementById(containerId);
-        if (!container) return;
+        let container = document.getElementById(containerId); if (!container) return;
         let tabId = containerId.replace("_squads", "");
-        let div = document.createElement("div");
-        div.className = "squad-box"; div.id = sqId;
+        let div = document.createElement("div"); div.className = "squad-box"; div.id = sqId;
         div.innerHTML = `
             <div class="squad-header">
                 <input type="text" class="squad-name-input" value="${name}" onchange="saveLocalOnly(); refreshStandbyList('${tabId}_standby', '${tabId}');">
@@ -282,29 +356,22 @@
 
     function moveSquad(tabId, sqId, direction) {
         saveLocalOnly(); 
-        
         let squadsObj = activityData[tabId];
         let keys = Object.keys(squadsObj);
         let index = keys.indexOf(sqId);
-        
         if (index === -1) return;
         let newIndex = index + direction;
         if (newIndex < 0 || newIndex >= keys.length) return; 
 
-        // Swap keys logic
         let newSquadsObj = {};
-        // Reconstruct object in new order
         for (let i = 0; i < keys.length; i++) {
             let key = keys[i];
             if (i === index) key = keys[newIndex];
             else if (i === newIndex) key = keys[index];
             newSquadsObj[key] = squadsObj[key];
         }
-        
         activityData[tabId] = newSquadsObj;
 
-        // Also need to preserve names order implies refreshing DOM
-        // Since names are stored in DOM or LocalStorage separately, we just rebuild DOM
         let squadContainer = document.getElementById(tabId + "_squads");
         let currentNames = {};
         squadContainer.querySelectorAll(".squad-box").forEach(box => {
@@ -312,13 +379,11 @@
         });
 
         squadContainer.innerHTML = ""; 
-
         for(let k in newSquadsObj) {
             let name = currentNames[k] || "小隊";
             createSquadDOM(squadContainer.id, k, name);
             renderSquadMembers(tabId, k, tabId + "_standby");
         }
-        
         saveLocalOnly();
         refreshStandbyList(tabId + "_standby", tabId);
     }
@@ -339,19 +404,19 @@
         let targetContent = document.getElementById(tabId);
         if (targetContent) targetContent.classList.add("active");
         
-        let btn = document.getElementById("btn-" + tabId); 
-        if(btn) btn.classList.add("active");
+        let btn = document.getElementById("btn-" + tabId); if(btn) btn.classList.add("active");
+
+        if (tabId === "leaveTab") {
+             updateLeaveMemberSelect(); // 切換到假單頁時更新下拉選單
+        }
 
         if (tabId.startsWith("act_")) {
             let squadContainerId = tabId + "_squads"; let standbyListId = tabId + "_standby";
             let squads = activityData[tabId];
             let squadContainer = document.getElementById(squadContainerId);
-            
-            // Only rebuild if empty or needs refresh logic
             if(squadContainer && squadContainer.innerHTML === "") {
                 let storedNames = JSON.parse(localStorage.getItem("ro_squad_names_v6") || "{}");
                 let tabNames = storedNames[tabId] || {};
-
                 for(let sqId in squads) {
                     let name = tabNames[sqId] || "小隊";
                     createSquadDOM(squadContainerId, sqId, name);
@@ -365,7 +430,7 @@
     function addNewSquad(containerId, defaultName="新小隊") {
         let tabId = containerId.replace("_squads", "");
         let sqId = "sq_" + new Date().getTime() + "_" + Math.floor(Math.random()*1000);
-        if(!activityData[tabId]) activityData[tabId] = {}; // safety check
+        if(!activityData[tabId]) activityData[tabId] = {}; 
         if(!activityData[tabId][sqId]) activityData[tabId][sqId] = [];
         createSquadDOM(containerId, sqId, defaultName); saveLocalOnly(); refreshStandbyList(tabId + "_standby", tabId);
     }
@@ -398,18 +463,10 @@
     }
 
     function removeMemberFromSquad(tabId, sqId, index) { 
-        activityData[tabId][sqId].splice(index, 1); 
-        renderSquadMembers(tabId, sqId, tabId + "_standby"); 
-        refreshStandbyList(tabId + "_standby", tabId); 
-        saveLocalOnly(); 
+        activityData[tabId][sqId].splice(index, 1); renderSquadMembers(tabId, sqId, tabId + "_standby"); refreshStandbyList(tabId + "_standby", tabId); saveLocalOnly(); 
     }
-
     function removeSquad(tabId, sqId) { 
-        if(!confirm("刪除此小隊？")) return; 
-        delete activityData[tabId][sqId]; 
-        document.getElementById(sqId).remove(); 
-        refreshStandbyList(tabId + "_standby", tabId); 
-        saveLocalOnly(); 
+        if(!confirm("刪除此小隊？")) return; delete activityData[tabId][sqId]; document.getElementById(sqId).remove(); refreshStandbyList(tabId + "_standby", tabId); saveLocalOnly(); 
     }
 
     function getMembersFromTable() {
@@ -422,17 +479,14 @@
         return members;
     }
 
-    // 只存本地 (用於小隊操作頻繁存檔)
     function saveLocalOnly() {
         let members = getMembersFromTable();
         saveToLocalStorage(members);
     }
 
-    // 存本地 + 雲端
     function saveAllData() {
         let members = getMembersFromTable();
-        saveToLocalStorage(members); // 先存本地保險
-
+        saveToLocalStorage(members); 
         let saveBtn = document.getElementById("saveBtn");
         let originalText = saveBtn.innerText;
         saveBtn.innerText = "上傳中...";
@@ -453,7 +507,7 @@
             }, 500);
         }).catch(err => {
             console.error(err);
-            alert("雲端存檔失敗，但本地已保存。");
+            alert("雲端存檔失敗，請檢查網址。");
             saveBtn.innerText = originalText;
             saveBtn.disabled = false;
         });
@@ -481,27 +535,23 @@
         let json = localStorage.getItem("ro_guild_system_v3");
         if (!json) json = localStorage.getItem("ro_guild_system_v1");
         
-        // 1. 先讀取本地設定
         if (json) {
             let data = JSON.parse(json);
             activityTabs = data.activityTabs || [];
             activityData = data.activityData || {};
             activityTabs.forEach(tab => createTabDOM(tab.id, tab.name));
             
-            // 2. 嘗試從雲端抓取最新成員名單 (若失敗則用本地)
+            // 嘗試讀取雲端成員，失敗則用本地
             fetch(DATA_SOURCE_URL + "?type=members")
                 .then(r => r.json())
                 .then(cloudMembers => {
                     if (cloudMembers && Array.isArray(cloudMembers) && cloudMembers.length > 0) {
-                        console.log("已載入雲端成員資料");
                         renderMemberTable(cloudMembers);
                     } else if (data.members) {
-                        console.log("雲端無資料，使用本地成員");
                         renderMemberTable(data.members);
                     }
                 })
                 .catch(err => {
-                    console.log("連線錯誤，使用本地成員", err);
                     if(data.members) renderMemberTable(data.members);
                 });
 
@@ -518,6 +568,7 @@
             let forceVal = (m.force === "是") ? 1 : (m.force === "否" ? 0 : m.force);
             insertMemberRow(m.id, m.job, forceVal, m.note);
         });
+        updateLeaveMemberSelect();
     }
 
     function fetchLeaveData() {
@@ -528,31 +579,25 @@
         
         fetch(DATA_SOURCE_URL).then(r => r.json()).then(data => {
             loading.style.display = "none";
-            if (!data || data.length === 0) { 
-                document.getElementById("leaveDateList").innerHTML = "<div style='padding:10px; color:#888;'>目前無假單</div>"; 
-                dashboard.style.display = "flex"; 
-            } else { 
-                rawLeaveData = data; 
-                processLeaveData(data); 
-                renderLeaveDashboard(); 
-                renderRawTable(data); 
-                dashboard.style.display = "flex"; 
-            }
+            rawLeaveData = data; 
+            processLeaveData(data); 
+            renderLeaveDashboard(); 
+            renderRawTable(data); 
+            dashboard.style.display = "flex"; 
         }).catch(err => { 
             loading.style.display = "none"; 
             errorBox.style.display = "block"; 
         });
     }
     
-    function loadDemoLeaveData() {
-        const demoData = [["2026-02-01T10:00:00.000Z", "SkyWalker", "2/3 (二)", "加班"], ["2/1 12:00", "HealerOne", "2/3 (二)", "事假"]];
-        document.getElementById("errorBox").style.display = "none"; document.getElementById("leaveDashboard").style.display = "flex";
-        rawLeaveData = demoData; processLeaveData(demoData); renderLeaveDashboard(); renderRawTable(demoData);
-    }
     function processLeaveData(data) {
         leavesByDate = {};
+        if(!Array.isArray(data)) return;
         data.forEach(row => {
-            let name = row[1]; let timeStr = row[2]; let reason = row[3]; let dates = timeStr.split(/,|，/);
+            // row: [timestamp, name, timeStr, reason]
+            let name = row[1]; let timeStr = row[2]; let reason = row[3]; 
+            // 簡單處理逗號分隔的多個日期
+            let dates = timeStr.split(/,|，/);
             dates.forEach(d => {
                 let dateKey = d.trim();
                 if(dateKey) {
@@ -563,6 +608,7 @@
             });
         });
     }
+    
     function getMemberInfo(name) {
         let rows = document.getElementById("guildTable").querySelectorAll("tbody tr");
         for(let r of rows) {
@@ -573,10 +619,11 @@
         }
         return { job: null, force: null, note: null };
     }
+    
     function renderLeaveDashboard() {
         const listContainer = document.getElementById("leaveDateList"); listContainer.innerHTML = "";
         let sortedDates = Object.keys(leavesByDate).sort();
-        if (sortedDates.length === 0) { listContainer.innerHTML = "<div style='padding:10px; color:#aaa;'>無請假資料</div>"; return; }
+        if (sortedDates.length === 0) { listContainer.innerHTML = "<div style='padding:10px; color:#aaa;'>目前無假單</div>"; return; }
         sortedDates.forEach(date => {
             let count = leavesByDate[date].length;
             let btn = document.createElement("div"); btn.className = "date-btn";
@@ -586,6 +633,7 @@
         });
         if (listContainer.firstChild) listContainer.firstChild.click();
     }
+    
     function selectDate(btn, date) {
         let allBtns = document.querySelectorAll(".date-btn"); allBtns.forEach(b => b.classList.remove("active")); btn.classList.add("active");
         document.getElementById("selectedDateTitle").innerText = `📅 ${date} 請假名單`;
@@ -600,35 +648,19 @@
             container.appendChild(card);
         });
     }
+    
     function toggleRawLeaveData() { let div = document.getElementById("rawLeaveTableContainer"); div.style.display = (div.style.display === "none") ? "block" : "none"; }
-    function formatDateTime(timeStr) {
-        try {
-            let d = new Date(timeStr);
-            if (!isNaN(d.getTime())) {
-                let m = (d.getMonth() + 1).toString().padStart(2, '0');
-                let day = d.getDate().toString().padStart(2, '0');
-                let h = d.getHours().toString().padStart(2, '0');
-                let min = d.getMinutes().toString().padStart(2, '0');
-                return `${m}/${day} ${h}:${min}`;
-            }
-        } catch(e) {}
-        return timeStr; 
-    }
+    
     function renderRawTable(data) {
         let tbody = document.getElementById("leaveTable").querySelector("tbody"); tbody.innerHTML = "";
+        if(!Array.isArray(data)) return;
         data.forEach((row, index) => { 
             let tr = tbody.insertRow(); 
-            let formattedTime = formatDateTime(row[0]);
-            tr.innerHTML = `<td class="time-cell">${formattedTime}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[3]}</td><td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRawLeaveRow(${index})">刪除</button></td>`; 
+            // row[0] 是時間, row[1] ID, row[2] 請假時間, row[3] 事由
+            tr.innerHTML = `<td class="time-cell">${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[3]}</td>`; 
         });
     }
-    function deleteRawLeaveRow(index) {
-        if(!confirm("確定要刪除這筆假單資料？(這會影響上方的儀表板統計，且無法復原)")) return;
-        rawLeaveData.splice(index, 1);
-        processLeaveData(rawLeaveData);
-        renderLeaveDashboard();
-        renderRawTable(rawLeaveData);
-    }
+
     function initJobUI() {
         const select = document.getElementById("mJob"); const filterContainer = document.getElementById("jobFilterContainer"); select.innerHTML = ""; 
         for (let job in JOB_DATA) {
@@ -637,11 +669,13 @@
             btn.onclick = function() { filterByJob(job); }; filterContainer.appendChild(btn);
         }
     }
+    
     function filterByJob(targetJob) {
         let btns = document.querySelectorAll(".filter-btn");
         btns.forEach(b => { if (b.innerText === targetJob || (targetJob === 'All' && b.innerText === '全部顯示')) { b.classList.add("active"); if(targetJob !== 'All') { b.style.background = JOB_DATA[targetJob]; b.style.color = "#000"; } } else { b.classList.remove("active"); b.style.background = "#222"; b.style.color = "#888"; } });
         let trs = document.getElementById("guildTable").querySelectorAll("tbody tr"); trs.forEach(tr => { let rowJob = tr.getAttribute("data-job"); tr.style.display = (targetJob === 'All' || rowJob === targetJob) ? "" : "none"; });
     }
+    
     function addMember() { 
         let id = document.getElementById("mID").value.trim(); 
         let job = document.getElementById("mJob").value; 
@@ -654,15 +688,21 @@
         document.getElementById("mID").value = ""; 
         filterByJob('All'); 
         saveLocalOnly(); 
+        updateLeaveMemberSelect();
     }
+    
     function insertMemberRow(id, job, force, note) {
         let tbody = document.getElementById("guildTable").querySelector("tbody"); let row = tbody.insertRow(); row.setAttribute("data-job", job); let jobColor = JOB_DATA[job] || "#fff";
         row.innerHTML = `<td contenteditable="true" class="editable" onfocus="this.dataset.old = this.innerText" onblur="updateMemberId(this)">${id}</td><td class="job-text" style="color: ${jobColor};">${job}</td><td class="center-col"><input type="number" class="force-input" value="${force}" onchange="saveLocalOnly()"></td><td contenteditable="true" class="editable" onblur="saveLocalOnly()">${note}</td><td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this); saveLocalOnly()">移除</button></td>`;
     }
+    
     function updateMemberId(cell) {
         let oldId = cell.dataset.old; let newId = cell.innerText.trim();
         if (oldId === newId) return; 
         if (!oldId) { saveLocalOnly(); return; }
+        // 更新下拉選單
+        updateLeaveMemberSelect();
+        // 更新小隊資料
         for (let tabId in activityData) {
             for (let sqId in activityData[tabId]) {
                 let squad = activityData[tabId][sqId];
@@ -677,22 +717,17 @@
     function deleteRow(btn) { 
         let row = btn.closest("tr");
         let id = row.cells[0].innerText.trim();
-
-        // 同步刪除所有活動小隊中的該成員
         for (let tabId in activityData) {
             for (let sqId in activityData[tabId]) {
                 activityData[tabId][sqId] = activityData[tabId][sqId].filter(m => m.id !== id);
             }
         }
-
         row.remove(); 
-        
-        // 刷新當前頁面
+        updateLeaveMemberSelect();
         let activeTab = document.querySelector(".tab-content.active");
         if (activeTab && activeTab.id.startsWith("act_")) { 
             let standbyId = activeTab.id + "_standby";
             refreshStandbyList(standbyId, activeTab.id);
-            // 重新渲染該頁面的小隊以移除該成員
             let squadContainer = document.getElementById(activeTab.id + "_squads");
             if(squadContainer) {
                  for(let sqId in activityData[activeTab.id]) {
@@ -705,35 +740,20 @@
     function sortTable(tableId, n, isNumber = false) {
         var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0; 
         table = document.getElementById(tableId); 
-        switching = true; 
-        dir = "asc"; 
+        switching = true; dir = "asc"; 
         while (switching) { 
-            switching = false; 
-            rows = table.rows; 
+            switching = false; rows = table.rows; 
             for (i = 1; i < (rows.length - 1); i++) { 
                 shouldSwitch = false; 
                 x = rows[i].getElementsByTagName("TD")[n]; 
                 y = rows[i + 1].getElementsByTagName("TD")[n]; 
-                
                 let xVal = isNumber ? parseFloat(x.querySelector('input').value) : x.innerHTML.toLowerCase(); 
                 let yVal = isNumber ? parseFloat(y.querySelector('input').value) : y.innerHTML.toLowerCase(); 
-                
-                if (dir == "asc") { 
-                    if (xVal > yVal) { shouldSwitch = true; break; } 
-                } else if (dir == "desc") { 
-                    if (xVal < yVal) { shouldSwitch = true; break; } 
-                } 
+                if (dir == "asc") { if (xVal > yVal) { shouldSwitch = true; break; } } 
+                else if (dir == "desc") { if (xVal < yVal) { shouldSwitch = true; break; } } 
             } 
-            if (shouldSwitch) { 
-                rows[i].parentNode.insertBefore(rows[i + 1], rows[i]); 
-                switching = true; 
-                switchcount ++; 
-            } else { 
-                if (switchcount == 0 && dir == "asc") { 
-                    dir = "desc"; 
-                    switching = true; 
-                } 
-            } 
+            if (shouldSwitch) { rows[i].parentNode.insertBefore(rows[i + 1], rows[i]); switching = true; switchcount ++; } 
+            else { if (switchcount == 0 && dir == "asc") { dir = "desc"; switching = true; } } 
         } 
     }
 </script>
