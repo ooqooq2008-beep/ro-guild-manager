@@ -8,14 +8,49 @@
         body { font-family: "Microsoft JhengHei", sans-serif; background: #1a1a1a; color: #e0e0e0; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
         .form-box { background: rgba(30, 30, 30, 0.95); border: 2px solid #cfaa70; padding: 30px; border-radius: 10px; width: 320px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         h2 { color: #ffde9e; border-bottom: 2px solid #cfaa70; padding-bottom: 10px; margin-top: 0; text-align: center; }
-        .input-group { text-align: left; margin-bottom: 15px; }
+        
+        /* 增加 position: relative 以便定位建議選單 */
+        .input-group { text-align: left; margin-bottom: 15px; position: relative; }
         label { display: block; font-size: 0.9em; color: #cfaa70; margin-bottom: 5px; font-weight: bold; }
         
-        /* 輸入框與選單樣式 */
         input[type="text"], select { width: 100%; padding: 10px; background: #2a2a2a; border: 1px solid #555; color: #fff; border-radius: 4px; box-sizing: border-box; }
         input:focus, select:focus { border-color: #4a90e2; outline: none; }
         
-        /* 日期選項容器 */
+        /* --- 自動完成建議選單樣式 --- */
+        .suggestion-box {
+            position: absolute;
+            top: 100%; /* 接在輸入框正下方 */
+            left: 0;
+            width: 100%;
+            background: #2a2a2a;
+            border: 1px solid #cfaa70;
+            border-top: none;
+            max-height: 150px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none; /* 預設隱藏 */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+            border-radius: 0 0 4px 4px;
+        }
+        .suggestion-item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #444;
+            color: #ddd;
+            font-size: 0.9em;
+        }
+        .suggestion-item:last-child { border-bottom: none; }
+        .suggestion-item:hover {
+            background: #4a90e2;
+            color: white;
+        }
+        .job-tag {
+            font-size: 0.8em;
+            color: #aaa;
+            margin-left: 5px;
+        }
+        .suggestion-item:hover .job-tag { color: #eee; }
+
         .date-container { background: #222; padding: 10px; border: 1px solid #444; border-radius: 4px; max-height: 200px; overflow-y: auto; }
         .date-option { display: flex; align-items: center; margin-bottom: 8px; cursor: pointer; }
         .date-option:last-child { margin-bottom: 0; }
@@ -34,13 +69,13 @@
     
     <div class="input-group">
         <label>遊戲角色名稱 <span style="color:red">*</span></label>
-        <input type="text" id="mName" placeholder="請輸入遊戲 ID">
+        <input type="text" id="mName" placeholder="輸入首字可搜尋..." autocomplete="off">
+        <div id="suggestionBox" class="suggestion-box"></div>
     </div>
 
     <div class="input-group">
         <label>請假日期 (至本週日) <span style="color:red">*</span></label>
-        <div id="dateList" class="date-container">
-            </div>
+        <div id="dateList" class="date-container"></div>
         <small id="dateHint" style="color: #888; font-size: 0.8em;"></small>
     </div>
 
@@ -64,23 +99,96 @@
 </div>
 
 <script>
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyo_llFwKnrejzal9uO-csOAF2riIUg7Gx8kRRy4XMt8puqPWSp0QGFtIhyfTJGg3FtzQ/exec"; 
+    // ▼▼▼ 請確保此網址與 Admin 系統的網址完全一致 ▼▼▼
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbx7i_ocU5mGIOK4oME1CwSm1oTaUG7R3BXs0YNBmDjXQHNMkDCHEwG1S0V52vDIASat/exec"; 
 
-    // 初始化日期選單
+    let cachedMembers = []; // 儲存從雲端抓下來的成員名單
+
     window.onload = function() {
         generateDateOptions();
+        fetchMemberList(); // 網頁載入時，同步抓取成員資料
+        setupAutocomplete(); // 設定輸入框監聽
     };
+
+    // --- 1. 從雲端抓取成員資料 ---
+    function fetchMemberList() {
+        const input = document.getElementById("mName");
+        // 增加一個 Loading 提示
+        input.placeholder = "載入成員名單中...";
+        
+        fetch(SCRIPT_URL + "?action=GET_ALL_DATA")
+            .then(r => r.json())
+            .then(data => {
+                if (data.members && Array.isArray(data.members)) {
+                    cachedMembers = data.members; // 格式: [{id: "Name", job: "Job", ...}, ...]
+                    input.placeholder = "請輸入遊戲 ID (支援首字搜尋)";
+                    console.log("成員名單已更新，共 " + cachedMembers.length + " 人");
+                }
+            })
+            .catch(err => {
+                console.error("無法載入成員名單", err);
+                input.placeholder = "請手動輸入遊戲 ID";
+            });
+    }
+
+    // --- 2. 設定自動完成邏輯 ---
+    function setupAutocomplete() {
+        const input = document.getElementById("mName");
+        const box = document.getElementById("suggestionBox");
+
+        // 當使用者輸入時
+        input.addEventListener("input", function() {
+            const val = this.value.trim().toLowerCase();
+            box.innerHTML = ""; // 清空建議
+
+            if (!val) {
+                box.style.display = "none";
+                return;
+            }
+
+            // 篩選符合的成員 (ID 開頭符合 或 包含該文字)
+            const matches = cachedMembers.filter(m => {
+                const id = m.id.toLowerCase();
+                // 這裡設定為：只要 ID "開頭" 符合，或者 ID "包含" 輸入文字
+                return id.startsWith(val) || id.includes(val);
+            });
+
+            if (matches.length > 0) {
+                matches.forEach(m => {
+                    const div = document.createElement("div");
+                    div.className = "suggestion-item";
+                    // 顯示 ID 與 職業
+                    div.innerHTML = `${m.id} <span class="job-tag">(${m.job})</span>`;
+                    
+                    // 點擊選項後的行為
+                    div.onclick = function() {
+                        input.value = m.id; // 填入 ID
+                        box.style.display = "none"; // 隱藏選單
+                    };
+                    box.appendChild(div);
+                });
+                box.style.display = "block";
+            } else {
+                box.style.display = "none";
+            }
+        });
+
+        // 點擊畫面其他地方時，關閉選單
+        document.addEventListener("click", function(e) {
+            if (e.target !== input && e.target !== box) {
+                box.style.display = "none";
+            }
+        });
+    }
 
     function generateDateOptions() {
         const container = document.getElementById("dateList");
         const hint = document.getElementById("dateHint");
         const today = new Date();
-        const dayOfWeek = today.getDay(); // 0(日) - 6(六)
+        const dayOfWeek = today.getDay(); 
         
-        // 邏輯：如果是週一(1)，開放複選；其他日子也開放複選以保留彈性
-        // 若要嚴格限制非週一只能單選，可修改 input type
         const isMonday = (dayOfWeek === 1);
-        const inputType = "checkbox"; // 統一使用 checkbox 方便操作
+        const inputType = "checkbox"; 
 
         if (isMonday) {
             hint.innerText = "今天是週一，您可以一次勾選本週多個日期。";
@@ -88,8 +196,6 @@
             hint.innerText = "請勾選您需要請假的日期。";
         }
 
-        // 計算距離本週日還有幾天 (週日 index 為 0，視為下週的開始或是本週結束，這裡設週日為 7 方便計算)
-        // 轉換：日(0)->7, 一(1)->1, ..., 六(6)->6
         let currentDayIndex = dayOfWeek === 0 ? 7 : dayOfWeek;
         let daysUntilSunday = 7 - currentDayIndex;
 
@@ -98,36 +204,20 @@
             return;
         }
 
-        // 從明天開始生成選項
         for (let i = 1; i <= daysUntilSunday; i++) {
             let targetDate = new Date(today);
             targetDate.setDate(today.getDate() + i);
 
             let m = targetDate.getMonth() + 1;
             let d = targetDate.getDate();
-            let w = targetDate.getDay(); // 0-6
+            let w = targetDate.getDay(); 
             let wStr = ["日", "一", "二", "三", "四", "五", "六"][w];
-
-            let dateString = `${m}/${d} (${wStr})`; // 顯示格式 2/3 (二)
+            let dateString = `${m}/${d} (${wStr})`; 
             
-            // 建立 HTML 結構
-            let div = document.createElement("label");
-            div.className = "date-option";
-            
-            let input = document.createElement("input");
-            input.type = inputType;
-            input.name = "leaveDate";
-            input.value = dateString;
-
-            // 如果非週一且想要嚴格單選，需加入 name 屬性與 radio 行為 (目前保留 checkbox)
-            // if (!isMonday) input.type = "radio"; 
-
-            let span = document.createElement("span");
-            span.innerText = dateString;
-
-            div.appendChild(input);
-            div.appendChild(span);
-            container.appendChild(div);
+            let div = document.createElement("label"); div.className = "date-option";
+            let input = document.createElement("input"); input.type = inputType; input.name = "leaveDate"; input.value = dateString;
+            let span = document.createElement("span"); span.innerText = dateString;
+            div.appendChild(input); div.appendChild(span); container.appendChild(div);
         }
     }
 
@@ -138,42 +228,34 @@
         const note = document.getElementById("mNote").value.trim();
         const btn = document.getElementById("submitBtn");
 
-        // 取得勾選的日期
         const checkboxes = document.querySelectorAll('input[name="leaveDate"]:checked');
         let selectedDates = [];
-        checkboxes.forEach((cb) => {
-            selectedDates.push(cb.value);
-        });
+        checkboxes.forEach((cb) => { selectedDates.push(cb.value); });
 
-        // 驗證
         if(!name) return alert("請輸入遊戲名稱");
         if(selectedDates.length === 0) return alert("請至少選擇一個請假日期");
         if(!reason) return alert("請選擇請假事由");
 
-        // 組合最終傳送字串
         const finalReason = note ? `${reason} (${note})` : reason;
-        const finalTime = selectedDates.join(", "); // 將日期用逗號串接
+        const finalTime = selectedDates.join(", "); 
 
-        btn.innerText = "傳送中...";
-        btn.disabled = true;
+        btn.innerText = "傳送中..."; btn.disabled = true;
 
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ 
+                type: "SAVE_LEAVE",
                 name: name, 
-                leaveTime: finalTime, // 這裡會傳送如 "1/30 (五), 1/31 (六)"
+                leaveTime: finalTime, 
                 reason: finalReason 
             })
         }).then(() => {
-            alert("假單已傳送！");
-            location.reload(); // 重新整理頁面以重置表單
+            alert("假單已傳送！"); location.reload(); 
         }).catch(err => {
-            alert("傳送失敗，請通知會長。");
-            console.error(err);
-            btn.disabled = false;
-            btn.innerText = "確認傳送假單";
+            alert("傳送失敗，請通知會長。"); console.error(err);
+            btn.disabled = false; btn.innerText = "確認傳送假單";
         });
     }
 </script>

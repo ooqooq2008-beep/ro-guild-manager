@@ -3,12 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>RO 工會管理系統 - 雲端版 (V2)</title>
+    <title>RO 工會管理系統 - 雲端專用版</title>
     <style>
         /* --- 全域與 RO 風格 --- */
         body { font-family: "Microsoft JhengHei", sans-serif; background-color: #1a1a1a; background-image: radial-gradient(circle, #2c3e50, #000000); color: #e0e0e0; margin: 20px; }
-        .ro-panel { background: rgba(30, 30, 30, 0.95); border: 2px solid #cfaa70; border-radius: 10px; padding: 20px; box-shadow: 0 0 15px rgba(207, 170, 112, 0.3); max-width: 1200px; margin: 0 auto; min-height: 700px; }
+        .ro-panel { background: rgba(30, 30, 30, 0.95); border: 2px solid #cfaa70; border-radius: 10px; padding: 20px; box-shadow: 0 0 15px rgba(207, 170, 112, 0.3); max-width: 1200px; margin: 0 auto; min-height: 700px; position: relative; }
         h2 { color: #ffde9e; text-align: center; border-bottom: 1px solid #cfaa70; padding-bottom: 10px; margin-top: 0; }
+        
+        /* 讀取遮罩 */
+        #loadingOverlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 999; display: flex; flex-direction: column; justify-content: center; align-items: center; border-radius: 8px; }
+        .loading-spinner { border: 5px solid #f3f3f3; border-top: 5px solid #cfaa70; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
         .tab-container { display: flex; margin-bottom: 20px; border-bottom: 2px solid #555; overflow-x: auto; }
         .tab-btn { padding: 10px 20px; background: #2a2a2a; border: 1px solid #555; border-bottom: none; color: #aaa; cursor: pointer; font-weight: bold; border-radius: 5px 5px 0 0; margin-right: 5px; white-space: nowrap; }
         .tab-btn:hover { background: #333; color: #fff; }
@@ -18,6 +24,36 @@
         .tab-content.active { display: block; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
         
+        /* 統計儀表板樣式 */
+        .stats-panel {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid #555;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .stat-badge {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            color: #000;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            border: 1px solid rgba(255,255,255,0.3);
+        }
+        .stat-total {
+            background: #f1c40f;
+            color: #000;
+            font-size: 1.1em;
+            margin-right: 15px;
+            border: 1px solid #f39c12;
+        }
+
         /* 輸入區塊樣式 */
         .input-group { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin-bottom: 20px; padding: 15px; background: rgba(0, 0, 0, 0.3); border-radius: 8px; align-items: flex-end; border: 1px solid #444; }
         .input-item { display: flex; flex-direction: column; }
@@ -28,11 +64,15 @@
         /* 按鈕樣式 */
         .ro-btn { padding: 8px 20px; background: linear-gradient(180deg, #4a90e2, #0056b3); color: white; border: 1px solid #8abeff; border-radius: 4px; cursor: pointer; font-weight: bold; min-width: 80px; }
         .ro-btn:hover { filter: brightness(1.1); }
-        .ro-btn:disabled { background: #555; border-color: #444; color: #888; cursor: not-allowed; }
+        .ro-btn:disabled { background: #555; border-color: #444; color: #888; cursor: not-allowed; filter: none; }
         .btn-delete { background: linear-gradient(180deg, #c0392b, #8e2a20); border-color: #e74c3c; }
         .btn-add-team { background: linear-gradient(180deg, #2ecc71, #27ae60); border-color: #2ecc71; margin-bottom: 10px;}
         .btn-move { padding: 2px 8px; background: #333; border: 1px solid #555; color: #fff; font-size: 0.8em; cursor: pointer; }
         .btn-submit-leave { background: linear-gradient(180deg, #f39c12, #d35400); border-color: #e67e22; color: #000; }
+        .btn-refresh { background: linear-gradient(180deg, #9b59b6, #8e44ad); border-color: #9b59b6; margin-left: 10px; }
+        .btn-card-delete { background: #c0392b; color: #fff; border: 1px solid #e74c3c; border-radius: 4px; cursor: pointer; padding: 4px 8px; font-size: 0.8em; margin-left: 10px; }
+        .btn-card-delete:hover { background: #e74c3c; }
+        .btn-promote { background: linear-gradient(180deg, #27ae60, #2ecc71); border-color: #2ecc71; color: #fff; }
         
         .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-bottom: 15px; padding: 10px; border-bottom: 1px solid #444; }
         .filter-btn { padding: 5px 12px; border: 1px solid #555; background: #222; color: #888; border-radius: 15px; cursor: pointer; font-size: 0.9em; transition: 0.2s; }
@@ -58,10 +98,9 @@
         .leave-name { font-size: 1.2em; font-weight: bold; width: 150px; }
         .leave-reason { color: #aaa; font-style: italic; flex-grow: 1; }
         .leave-force { color: #f1c40f; font-weight: bold; margin-left: 10px; font-size: 0.9em; }
-        .error-box { padding: 20px; text-align: center; border: 1px dashed #e74c3c; color: #e74c3c; margin: 20px; display: none; }
         .time-cell { font-family: monospace; color: #8abeff; font-size: 0.9em; }
         
-        /* 小隊區塊 */
+        /* 小隊 Grid 佈局 */
         .activity-container { display: flex; gap: 20px; height: 600px; }
         .standby-panel { flex: 1; background: rgba(0, 0, 0, 0.3); border: 1px solid #555; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; }
         .standby-list-content { overflow-y: auto; flex-grow: 1; }
@@ -70,8 +109,9 @@
         .member-info-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;}
         .member-detail-row { font-size: 0.85em; color: #888; display: flex; gap: 10px; }
         .force-badge { color: #f1c40f; font-weight: bold; }
-        .squads-panel { flex: 3; display: flex; gap: 15px; overflow-x: auto; padding-bottom: 10px; align-items: flex-start; }
-        .squad-box { min-width: 260px; background: rgba(40, 40, 40, 0.9); border: 1px solid #cfaa70; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; transition: transform 0.2s; }
+        
+        .squads-panel { flex: 3; display: grid; grid-template-columns: 1fr 1fr; grid-auto-rows: max-content; gap: 15px; overflow-y: auto; overflow-x: hidden; padding-bottom: 10px; align-items: start; padding-right: 5px; }
+        .squad-box { width: auto; background: rgba(40, 40, 40, 0.9); border: 1px solid #cfaa70; border-radius: 8px; padding: 10px; display: flex; flex-direction: column; transition: transform 0.2s; }
         .squad-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-bottom: 1px solid #555; padding-bottom: 5px; }
         .squad-name-input { background: transparent; border: none; color: #ffde9e; font-weight: bold; font-size: 1.1em; width: 50%; }
         .squad-name-input:focus { border-bottom: 1px solid #cfaa70; outline: none; }
@@ -85,15 +125,25 @@
 <body>
 
 <div class="ro-panel">
-    <h2>✦ RO 工會管理系統 (雲端版 v2) ✦</h2>
+    <div id="loadingOverlay">
+        <div class="loading-spinner"></div>
+        <div style="color: #cfaa70; font-weight: bold;">正在同步雲端資料庫...</div>
+    </div>
+
+    <h2>✦ RO 工會管理系統 (雲端專用版) ✦</h2>
 
     <div class="tab-container" id="tabContainer">
         <button class="tab-btn active" id="btn-memberTab" onclick="openTab('memberTab')">成員名單</button>
+        <button class="tab-btn" id="btn-queueTab" onclick="openTab('queueTab')">⏳ 排隊名單</button>
         <button class="tab-btn" id="btn-leaveTab" onclick="openTab('leaveTab')">假單儀表板</button>
         <button class="tab-btn tab-btn-add" onclick="createNewActivityTab()">+ 新增活動</button>
     </div>
 
     <div id="memberTab" class="tab-content active">
+        <div class="stats-panel" id="memberStats">
+            <div class="stat-badge stat-total">總人數：0</div>
+            </div>
+
         <div class="filter-bar" id="jobFilterContainer">
             <button class="filter-btn active" onclick="filterByJob('All')">全部顯示</button>
         </div>
@@ -103,7 +153,10 @@
             <div class="input-item"><label>戰力順位</label><input type="number" id="mForce" class="force-input" placeholder="0" value="0"></div>
             <div class="input-item"><label>備註</label><input type="text" id="mNote" placeholder="備註"></div>
             <button class="ro-btn" onclick="addMember()">加入成員</button>
-            <button class="ro-btn" id="saveBtn" style="background: #e67e22; border-color: #d35400;" onclick="saveAllData()">雲端存檔</button>
+            <button class="ro-btn" id="saveBtn" style="background: #e67e22; border-color: #d35400;" onclick="saveAllData()">☁ 雲端存檔</button>
+        </div>
+        <div style="text-align:center; color:#e74c3c; font-size:0.9em; margin-bottom:10px;">
+            ⚠️ 注意：所有修改請務必按下「雲端存檔」，否則重新整理後資料將會遺失。
         </div>
         <table id="guildTable">
             <thead>
@@ -117,29 +170,45 @@
         </table>
     </div>
 
+    <div id="queueTab" class="tab-content">
+        <div class="input-group" style="background:rgba(44, 62, 80, 0.6); border-color: #555;">
+            <div class="input-item"><label>排隊 ID</label><input type="text" id="qID" placeholder="ID" style="width: 120px;"></div>
+            <div class="input-item"><label>職業</label><select id="qJob"></select></div>
+            <div class="input-item"><label>戰力順位</label><input type="number" id="qForce" class="force-input" placeholder="0" value="0"></div>
+            <div class="input-item"><label>備註</label><input type="text" id="qNote" placeholder="例如: 朋友介紹"></div>
+            <button class="ro-btn" onclick="addToQueue()">加入排隊</button>
+        </div>
+        
+        <table id="queueTable">
+            <thead>
+                <tr>
+                    <th>ID</th><th>職業</th><th class="center-col">戰力</th><th>備註</th><th class="center-col">操作</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+        <div style="text-align:center; color:#aaa; margin-top:10px;" id="queueEmptyHint">目前無人排隊</div>
+    </div>
+
     <div id="leaveTab" class="tab-content">
         <div class="input-group" style="background: rgba(44, 62, 80, 0.6); border-color: #555;">
             <div class="input-item">
-                <label>選擇成員 (請先建立名單)</label>
+                <label>選擇成員</label>
                 <select id="leaveMemberSelect" style="width: 150px;"><option>載入中...</option></select>
             </div>
             <div class="input-item">
                 <label>請假日期/時間</label>
-                <input type="text" id="leaveTime" placeholder="例: 2/3 晚上, 2/4 全天" style="width: 180px;">
+                <input type="text" id="leaveTime" placeholder="例: 2/3 晚上" style="width: 180px;">
             </div>
             <div class="input-item">
                 <label>事由</label>
-                <input type="text" id="leaveReason" placeholder="例: 加班, 聚餐" style="width: 150px;">
+                <input type="text" id="leaveReason" placeholder="例: 加班" style="width: 150px;">
             </div>
             <button class="ro-btn btn-submit-leave" id="btnSubmitLeave" onclick="submitLeave()">提交假單</button>
-        </div>
-
-        <div id="loadingBox" style="text-align:center; padding: 20px; color: #aaa;">資料連線中...</div>
-        <div id="errorBox" class="error-box">
-            無法讀取線上資料。<br>請確認 Apps Script 網址是否正確。
+            <button class="ro-btn btn-refresh" onclick="loadAllDataFromCloud()">⟳ 刷新假單</button>
         </div>
         
-        <div class="leave-dashboard" id="leaveDashboard" style="display:none;">
+        <div class="leave-dashboard" id="leaveDashboard">
             <div class="leave-date-list" id="leaveDateList"></div>
             <div class="leave-detail-panel">
                 <h3 id="selectedDateTitle" style="color: #cfaa70; margin-top:0; border-bottom:1px solid #555; padding-bottom:10px;">請選擇左側日期</h3>
@@ -148,7 +217,7 @@
         </div>
 
         <div style="margin-top: 20px; text-align: right;">
-            <button class="ro-btn btn-delete" style="font-size: 0.8em;" onclick="toggleRawLeaveData()">顯示原始資料表</button>
+            <button class="ro-btn btn-delete" style="font-size: 0.8em;" onclick="toggleRawLeaveData()">顯示原始資料表 (除錯用)</button>
         </div>
         <div id="rawLeaveTableContainer" style="display:none; margin-top:10px;">
              <table id="leaveTable"><thead><tr><th>系統時間</th><th>ID</th><th>請假時間</th><th>事由</th></tr></thead><tbody></tbody></table>
@@ -160,9 +229,7 @@
 </div>
 
 <script>
-    // ▼▼▼ 請務必將此處替換為您更新並「部署新版本」後的 Apps Script 網址 ▼▼▼
-    const DATA_SOURCE_URL = "https://script.google.com/macros/s/AKfycbyo_llFwKnrejzal9uO-csOAF2riIUg7Gx8kRRy4XMt8puqPWSp0QGFtIhyfTJGg3FtzQ/exec";
-    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+    const DATA_SOURCE_URL = "https://script.google.com/macros/s/AKfycbx7i_ocU5mGIOK4oME1CwSm1oTaUG7R3BXs0YNBmDjXQHNMkDCHEwG1S0V52vDIASat/exec";
 
     const JOB_DATA = {
         "騎士": "#e74c3c", "巫師": "#9b59b6", "獵人": "#2ecc71", "祭司": "#00d2d3",
@@ -172,82 +239,290 @@
 
     let activityTabs = []; 
     let activityData = {}; 
-    let rawLeaveData = []; 
+    let squadNames = {}; 
     let leavesByDate = {};
+    let waitingList = []; // 新增：排隊名單陣列
+    let isDataDirty = false; 
+
+    window.onbeforeunload = function() {
+        if (isDataDirty) return "您有尚未儲存的修改，確定要離開嗎？";
+    };
 
     window.onload = function() {
         initJobUI();      
-        loadAllData(); // 讀取本地成員
-        fetchLeaveData(); // 讀取雲端假單
+        loadAllDataFromCloud(); 
     };
 
-    // --- 假單提交邏輯 (新增) ---
-    function updateLeaveMemberSelect() {
-        let select = document.getElementById("leaveMemberSelect");
-        select.innerHTML = "";
-        let members = getMembersFromTable();
-        if (members.length === 0) {
-            select.innerHTML = "<option>無成員資料</option>";
-            return;
-        }
-        members.forEach(m => {
-            let op = document.createElement("option");
-            op.value = m.id;
-            op.text = m.id + " (" + m.job + ")";
-            select.appendChild(op);
-        });
+    function markDirty() {
+        isDataDirty = true;
+        document.getElementById("saveBtn").innerText = "☁ 雲端存檔 (未儲存)";
     }
 
-    function submitLeave() {
-        let name = document.getElementById("leaveMemberSelect").value;
-        let time = document.getElementById("leaveTime").value.trim();
-        let reason = document.getElementById("leaveReason").value.trim();
+    function loadAllDataFromCloud() {
+        const overlay = document.getElementById("loadingOverlay");
+        overlay.style.display = "flex";
+
+        fetch(DATA_SOURCE_URL + "?action=GET_ALL_DATA")
+            .then(r => r.json())
+            .then(data => {
+                console.log("Cloud Data Received:", data);
+
+                // 1. 成員名單
+                let tbody = document.getElementById("guildTable").querySelector("tbody");
+                tbody.innerHTML = "";
+                if (data.members && Array.isArray(data.members)) {
+                    data.members.forEach(m => insertMemberRow(m.id, m.job, m.force, m.note));
+                }
+                updateMemberStats(); // 載入後更新統計
+
+                // 2. 排隊名單 (新增)
+                waitingList = (data.queue && Array.isArray(data.queue)) ? data.queue : [];
+                renderQueueTable();
+
+                // 3. 假單
+                if (data.leaves && Array.isArray(data.leaves)) {
+                    processLeaveData(data.leaves);
+                } else {
+                    leavesByDate = {}; 
+                }
+                renderLeaveDashboard();
+                renderRawTable(data.leaves);
+
+                // 4. 活動分頁
+                activityTabs = data.activityTabs || [];
+                activityData = data.activityData || {};
+                squadNames = data.squadNames || {}; 
+                
+                document.querySelectorAll(".tab-content[id^='act_']").forEach(e => e.remove());
+                document.querySelectorAll(".tab-btn[id^='btn-act_']").forEach(e => e.remove());
+                
+                activityTabs.forEach(tab => {
+                    createTabDOM(tab.id, tab.name);
+                    let squadContainerId = tab.id + "_squads";
+                    let standbyListId = tab.id + "_standby";
+                    
+                    if (activityData[tab.id]) {
+                        for (let sqId in activityData[tab.id]) {
+                            let sName = (squadNames[tab.id] && squadNames[tab.id][sqId]) ? squadNames[tab.id][sqId] : "小隊";
+                            createSquadDOM(squadContainerId, sqId, sName);
+                            renderSquadMembers(tab.id, sqId, standbyListId);
+                        }
+                    }
+                    refreshStandbyList(standbyListId, tab.id);
+                });
+                
+                updateLeaveMemberSelect();
+                overlay.style.display = "none";
+                isDataDirty = false;
+                document.getElementById("saveBtn").innerText = "☁ 雲端存檔";
+            })
+            .catch(err => {
+                console.error("Load Error:", err);
+                alert("讀取雲端資料失敗，請檢查權限或網頁 Console。");
+                overlay.innerHTML = "<div style='color:red'>連線失敗，請重新整理</div>";
+            });
+    }
+
+    function saveAllData() {
+        let members = getMembersFromTable();
         
-        if(!name || name === "無成員資料") return alert("請先在成員名單分頁建立成員！");
-        if(!time) return alert("請輸入請假時間");
-        
-        let btn = document.getElementById("btnSubmitLeave");
-        let originalText = btn.innerText;
-        btn.disabled = true;
-        btn.innerText = "傳送中...";
+        // 同步活動分頁名稱
+        activityTabs.forEach(tab => {
+            if (!squadNames[tab.id]) squadNames[tab.id] = {};
+            let container = document.getElementById(tab.id + "_squads");
+            if (container) {
+                let inputs = container.querySelectorAll(".squad-name-input");
+                inputs.forEach(inp => {
+                    let sqId = inp.closest(".squad-box").id;
+                    squadNames[tab.id][sqId] = inp.value;
+                });
+            }
+        });
+
+        let saveBtn = document.getElementById("saveBtn");
+        saveBtn.innerText = "上傳中...";
+        saveBtn.disabled = true;
 
         fetch(DATA_SOURCE_URL, {
             method: "POST",
             mode: "no-cors",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-                type: "SAVE_LEAVE",
-                name: name,
-                time: time,
-                reason: reason
+                type: "SAVE_FULL_DATA", 
+                members: members,
+                activityTabs: activityTabs,
+                activityData: activityData,
+                squadNames: squadNames,
+                queue: waitingList // 新增：同時儲存排隊名單
             })
         }).then(() => {
-            // 因 no-cors 模式無法得知回傳，這裡做延遲重新讀取
             setTimeout(() => {
-                alert("假單已送出！");
-                document.getElementById("leaveTime").value = "";
-                document.getElementById("leaveReason").value = "";
-                btn.disabled = false;
-                btn.innerText = originalText;
-                fetchLeaveData(); // 重新整理假單列表
-            }, 1000);
+                saveBtn.innerText = "存檔完成";
+                isDataDirty = false;
+                setTimeout(() => { saveBtn.innerText = "☁ 雲端存檔"; saveBtn.disabled = false; }, 1000);
+            }, 500);
         }).catch(err => {
             console.error(err);
-            alert("傳送失敗，請檢查網路或 Apps Script 設定");
-            btn.disabled = false;
-            btn.innerText = originalText;
+            alert("雲端存檔失敗，請檢查網址。");
+            saveBtn.innerText = "存檔失敗";
+            saveBtn.disabled = false;
         });
     }
 
-    // --- 核心邏輯 ---
+    // --- 排隊名單邏輯 (新增) ---
+    function addToQueue() {
+        let id = document.getElementById("qID").value.trim();
+        let job = document.getElementById("qJob").value;
+        let force = document.getElementById("qForce").value;
+        let note = document.getElementById("qNote").value;
+
+        if (!id) return alert("請輸入排隊 ID");
+        // 檢查是否已在排隊名單或正式名單 (簡單檢查)
+        if (waitingList.some(q => q.id === id)) return alert("此 ID 已在排隊中");
+        
+        waitingList.push({ id: id, job: job, force: force, note: note });
+        
+        document.getElementById("qID").value = "";
+        renderQueueTable();
+        markDirty();
+    }
+
+    function renderQueueTable() {
+        let tbody = document.getElementById("queueTable").querySelector("tbody");
+        tbody.innerHTML = "";
+        let hint = document.getElementById("queueEmptyHint");
+        
+        if (waitingList.length === 0) {
+            hint.style.display = "block";
+            return;
+        } else {
+            hint.style.display = "none";
+        }
+
+        waitingList.forEach((q, index) => {
+            let tr = tbody.insertRow();
+            let jobColor = JOB_DATA[q.job] || "#fff";
+            tr.innerHTML = `
+                <td>${q.id}</td>
+                <td style="color:${jobColor}; font-weight:bold;">${q.job}</td>
+                <td class="center-col">${q.force}</td>
+                <td>${q.note}</td>
+                <td class="center-col" style="display:flex; gap:5px; justify-content:center;">
+                    <button class="ro-btn btn-promote" style="padding:4px 8px; font-size:0.8em;" onclick="promoteToMember(${index})">加入公會</button>
+                    <button class="ro-btn btn-delete" style="padding:4px 8px; font-size:0.8em;" onclick="removeFromQueue(${index})">刪除</button>
+                </td>
+            `;
+        });
+    }
+
+    function promoteToMember(index) {
+        let person = waitingList[index];
+        if(!confirm(`確定讓「${person.id}」正式加入公會嗎？`)) return;
+
+        // 1. 加入正式名單
+        insertMemberRow(person.id, person.job, person.force, person.note);
+        
+        // 2. 從排隊移除
+        waitingList.splice(index, 1);
+        
+        // 3. 更新介面
+        renderQueueTable();
+        updateMemberStats();
+        updateLeaveMemberSelect();
+        filterByJob('All'); // 切換回全部顯示以免看不到新人
+        openTab('memberTab'); // 自動跳轉回成員分頁
+        markDirty();
+        
+        alert(`${person.id} 已成功加入成員名單！`);
+    }
+
+    function removeFromQueue(index) {
+        if(!confirm("確定刪除此排隊人員？")) return;
+        waitingList.splice(index, 1);
+        renderQueueTable();
+        markDirty();
+    }
+
+    // --- 成員統計邏輯 (新增) ---
+    function updateMemberStats() {
+        let rows = document.getElementById("guildTable").querySelectorAll("tbody tr");
+        let totalCount = 0;
+        let jobCounts = {};
+
+        // 初始化職業計數
+        for (let job in JOB_DATA) { jobCounts[job] = 0; }
+
+        rows.forEach(row => {
+            if (row.style.display !== "none") { // 只統計可見的 (如果想要統計全部，可移除此判斷，但目前 filter 是用 display none)
+                // 修正：應該統計所有成員，不受篩選影響，除非使用者希望只看篩選後的統計
+                // 這裡改為統計「目前表格內的所有資料」，不受 filterByJob 視覺隱藏影響
+            }
+            totalCount++;
+            let job = row.getAttribute("data-job");
+            if (jobCounts[job] !== undefined) {
+                jobCounts[job]++;
+            } else {
+                // 處理舊資料可能有的例外職業
+                if(!jobCounts[job]) jobCounts[job] = 0;
+                jobCounts[job]++;
+            }
+        });
+
+        // 渲染
+        let panel = document.getElementById("memberStats");
+        let html = `<div class="stat-badge stat-total">總人數：${totalCount}</div>`;
+        
+        for (let job in JOB_DATA) {
+            if (jobCounts[job] > 0) {
+                let color = JOB_DATA[job];
+                html += `<div class="stat-badge" style="background:${color}; text-shadow:1px 1px 1px #000; color:#fff;">${job}：${jobCounts[job]}</div>`;
+            }
+        }
+        panel.innerHTML = html;
+    }
+
+    // --- 原有功能維持 ---
+    
+    function submitLeave() {
+        let name = document.getElementById("leaveMemberSelect").value;
+        let time = document.getElementById("leaveTime").value.trim();
+        let reason = document.getElementById("leaveReason").value.trim();
+        if(!name || name === "無成員資料") return alert("請先在成員名單分頁建立成員！");
+        if(!time) return alert("請輸入請假時間");
+        let btn = document.getElementById("btnSubmitLeave");
+        btn.disabled = true; btn.innerText = "傳送中...";
+        fetch(DATA_SOURCE_URL, {
+            method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "SAVE_LEAVE", name: name, leaveTime: time, reason: reason })
+        }).then(() => {
+            setTimeout(() => {
+                alert("假單已送出！即將刷新...");
+                document.getElementById("leaveTime").value = "";
+                document.getElementById("leaveReason").value = "";
+                btn.disabled = false; btn.innerText = "提交假單";
+                loadAllDataFromCloud();
+            }, 1000);
+        });
+    }
+
+    function deleteLeave(name, time, reason, btn) {
+        if (!confirm(`確定要刪除「${name}」在「${time}」的假單嗎？`)) return;
+        btn.disabled = true; btn.innerText = "...";
+        fetch(DATA_SOURCE_URL, {
+            method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ type: "DELETE_LEAVE", name: name, leaveTime: time, reason: reason })
+        }).then(() => {
+            setTimeout(() => { alert("刪除指令已送出！"); loadAllDataFromCloud(); }, 1000);
+        }).catch(err => { alert("刪除失敗"); btn.disabled = false; btn.innerText = "刪除"; });
+    }
+
     function createNewActivityTab(defaultName = null) {
         let name = defaultName;
         if (!name) { name = prompt("新活動名稱:"); if (!name) return; }
         let tabId = "act_" + new Date().getTime();
         activityTabs.push({ id: tabId, name: name });
-        activityData[tabId] = {}; 
-        createTabDOM(tabId, name);
-        saveLocalOnly(); 
+        activityData[tabId] = {}; squadNames[tabId] = {};
+        createTabDOM(tabId, name); markDirty();
     }
 
     function createTabDOM(tabId, name) {
@@ -258,15 +533,12 @@
         newBtn.onclick = function() { openTab(tabId); };
         newBtn.ondblclick = function() { deleteTab(tabId, name); };
         btnContainer.insertBefore(newBtn, addBtn);
-
         let contentContainer = document.getElementById("dynamicContentContainer");
         let contentDiv = document.createElement("div");
         contentDiv.id = tabId; contentDiv.className = "tab-content";
         let squadContainerId = tabId + "_squads"; let standbyListId = tabId + "_standby";
-
         let jobOptions = `<option value="All">全部職業</option>`;
         for(let j in JOB_DATA) { jobOptions += `<option value="${j}">${j}</option>`; }
-
         contentDiv.innerHTML = `
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
                 <button class="ro-btn btn-add-team" onclick="addNewSquad('${squadContainerId}')">+ 新增小隊</button>
@@ -295,37 +567,30 @@
         listDiv.innerHTML = "";
         let filterJob = document.getElementById(`filter_${tabId}`).value;
         let sortByForce = document.getElementById(`sort_${tabId}`).checked;
-
         let members = [];
         let rows = document.getElementById("guildTable").querySelectorAll("tbody tr");
         rows.forEach(r => {
             let forceInput = r.querySelector(".force-input");
             members.push({ id: r.cells[0].innerText, job: r.cells[1].innerText, force: forceInput ? parseFloat(forceInput.value || 0) : 0, note: r.cells[3].innerText });
         });
-
         if (filterJob !== "All") members = members.filter(m => m.job === filterJob);
         if (sortByForce) members.sort((a, b) => b.force - a.force);
-
         let assignedIDs = [];
         let squads = activityData[tabId];
         for(let sqId in squads) { squads[sqId].forEach(m => assignedIDs.push(m.id)); }
-        
         let squadContainer = document.getElementById(tabId + "_squads");
         let squadDivs = squadContainer ? squadContainer.getElementsByClassName("squad-box") : [];
-
         members.forEach(m => {
             let isAssigned = assignedIDs.includes(m.id);
             let jobColor = JOB_DATA[m.job] || "#fff";
             let card = document.createElement("div");
             card.className = "member-card" + (isAssigned ? " disabled" : "");
-            
             let options = `<option value="">加入...</option>`;
             Array.from(squadDivs).forEach(sq => {
                  let sqNameInput = sq.querySelector(".squad-name-input");
                  let sqName = sqNameInput ? sqNameInput.value : "小隊";
                  options += `<option value="${sq.id}">${sqName}</option>`;
             });
-
             let forceText = (m.force > 0) ? `戰:${m.force}` : "";
             card.innerHTML = `
                 <div class="member-info-row">
@@ -343,7 +608,7 @@
         let div = document.createElement("div"); div.className = "squad-box"; div.id = sqId;
         div.innerHTML = `
             <div class="squad-header">
-                <input type="text" class="squad-name-input" value="${name}" onchange="saveLocalOnly(); refreshStandbyList('${tabId}_standby', '${tabId}');">
+                <input type="text" class="squad-name-input" value="${name}" onchange="markDirty(); refreshStandbyList('${tabId}_standby', '${tabId}');">
                 <div class="squad-controls">
                     <button class="btn-move" title="向左移" onclick="moveSquad('${tabId}', '${sqId}', -1)">←</button>
                     <button class="btn-move" title="向右移" onclick="moveSquad('${tabId}', '${sqId}', 1)">→</button>
@@ -354,15 +619,64 @@
         container.appendChild(div);
     }
 
+    function addNewSquad(containerId, defaultName="新小隊") {
+        let tabId = containerId.replace("_squads", "");
+        let sqId = "sq_" + new Date().getTime() + "_" + Math.floor(Math.random()*1000);
+        if(!activityData[tabId]) activityData[tabId] = {}; 
+        if(!activityData[tabId][sqId]) activityData[tabId][sqId] = [];
+        if (!squadNames[tabId]) squadNames[tabId] = {};
+        squadNames[tabId][sqId] = defaultName;
+        createSquadDOM(containerId, sqId, defaultName); 
+        markDirty(); refreshStandbyList(tabId + "_standby", tabId);
+    }
+
+    function addMemberToSquad(select, mId, mJob, tabId) {
+        let sqId = select.value; if(!sqId) return;
+        activityData[tabId][sqId].push({ id: mId, job: mJob });
+        renderSquadMembers(tabId, sqId, tabId + "_standby"); refreshStandbyList(tabId + "_standby", tabId); markDirty();
+    }
+    
+    function renderSquadMembers(tabId, sqId, listId) {
+        let squadDiv = document.getElementById(sqId); if(!squadDiv) return;
+        let listDiv = squadDiv.querySelector(".squad-list"); listDiv.innerHTML = "";
+        let members = activityData[tabId][sqId];
+        if (members) {
+            members.forEach((m, index) => {
+                let jobColor = JOB_DATA[m.job] || "#fff";
+                let row = document.createElement("div"); row.className = "squad-member";
+                let span = document.createElement("span");
+                span.innerHTML = `<span style="color:${jobColor}; font-weight:bold;">${m.job}</span> `;
+                let idText = document.createTextNode(" " + m.id);
+                span.appendChild(idText);
+                let btn = document.createElement("span");
+                btn.className = "remove-icon";
+                btn.innerText = "x";
+                btn.onclick = function() { removeMemberFromSquad(tabId, sqId, index); };
+                row.appendChild(span); row.appendChild(btn); listDiv.appendChild(row);
+            });
+        }
+    }
+
+    function removeMemberFromSquad(tabId, sqId, index) { 
+        activityData[tabId][sqId].splice(index, 1); 
+        renderSquadMembers(tabId, sqId, tabId + "_standby"); refreshStandbyList(tabId + "_standby", tabId); markDirty(); 
+    }
+
+    function removeSquad(tabId, sqId) { 
+        if(!confirm("刪除此小隊？")) return; 
+        delete activityData[tabId][sqId]; 
+        if (squadNames[tabId]) delete squadNames[tabId][sqId];
+        document.getElementById(sqId).remove(); 
+        refreshStandbyList(tabId + "_standby", tabId); markDirty(); 
+    }
+
     function moveSquad(tabId, sqId, direction) {
-        saveLocalOnly(); 
         let squadsObj = activityData[tabId];
         let keys = Object.keys(squadsObj);
         let index = keys.indexOf(sqId);
         if (index === -1) return;
         let newIndex = index + direction;
         if (newIndex < 0 || newIndex >= keys.length) return; 
-
         let newSquadsObj = {};
         for (let i = 0; i < keys.length; i++) {
             let key = keys[i];
@@ -371,28 +685,26 @@
             newSquadsObj[key] = squadsObj[key];
         }
         activityData[tabId] = newSquadsObj;
-
         let squadContainer = document.getElementById(tabId + "_squads");
-        let currentNames = {};
         squadContainer.querySelectorAll(".squad-box").forEach(box => {
-            currentNames[box.id] = box.querySelector(".squad-name-input").value;
+            if(!squadNames[tabId]) squadNames[tabId] = {};
+            squadNames[tabId][box.id] = box.querySelector(".squad-name-input").value;
         });
-
         squadContainer.innerHTML = ""; 
         for(let k in newSquadsObj) {
-            let name = currentNames[k] || "小隊";
+            let name = (squadNames[tabId] && squadNames[tabId][k]) ? squadNames[tabId][k] : "小隊";
             createSquadDOM(squadContainer.id, k, name);
             renderSquadMembers(tabId, k, tabId + "_standby");
         }
-        saveLocalOnly();
-        refreshStandbyList(tabId + "_standby", tabId);
+        markDirty(); refreshStandbyList(tabId + "_standby", tabId);
     }
 
     function deleteTab(tabId, name) {
         if(!confirm(`確定刪除「${name}」？`)) return;
         document.getElementById("btn-" + tabId).remove(); document.getElementById(tabId).remove();
-        activityTabs = activityTabs.filter(t => t.id !== tabId); delete activityData[tabId];
-        openTab('memberTab'); saveLocalOnly();
+        activityTabs = activityTabs.filter(t => t.id !== tabId); 
+        delete activityData[tabId]; delete squadNames[tabId];
+        openTab('memberTab'); markDirty();
     }
     
     function openTab(tabId) {
@@ -400,75 +712,24 @@
         for (let c of contents) c.classList.remove("active");
         let btns = document.getElementsByClassName("tab-btn");
         for (let b of btns) b.classList.remove("active");
-        
         let targetContent = document.getElementById(tabId);
         if (targetContent) targetContent.classList.add("active");
-        
         let btn = document.getElementById("btn-" + tabId); if(btn) btn.classList.add("active");
-
-        if (tabId === "leaveTab") {
-             updateLeaveMemberSelect(); // 切換到假單頁時更新下拉選單
-        }
-
+        if (tabId === "leaveTab") { updateLeaveMemberSelect(); }
         if (tabId.startsWith("act_")) {
-            let squadContainerId = tabId + "_squads"; let standbyListId = tabId + "_standby";
-            let squads = activityData[tabId];
-            let squadContainer = document.getElementById(squadContainerId);
-            if(squadContainer && squadContainer.innerHTML === "") {
-                let storedNames = JSON.parse(localStorage.getItem("ro_squad_names_v6") || "{}");
-                let tabNames = storedNames[tabId] || {};
-                for(let sqId in squads) {
-                    let name = tabNames[sqId] || "小隊";
-                    createSquadDOM(squadContainerId, sqId, name);
-                    renderSquadMembers(tabId, sqId, standbyListId);
-                }
-            }
+            let standbyListId = tabId + "_standby";
             refreshStandbyList(standbyListId, tabId);
         }
     }
 
-    function addNewSquad(containerId, defaultName="新小隊") {
-        let tabId = containerId.replace("_squads", "");
-        let sqId = "sq_" + new Date().getTime() + "_" + Math.floor(Math.random()*1000);
-        if(!activityData[tabId]) activityData[tabId] = {}; 
-        if(!activityData[tabId][sqId]) activityData[tabId][sqId] = [];
-        createSquadDOM(containerId, sqId, defaultName); saveLocalOnly(); refreshStandbyList(tabId + "_standby", tabId);
-    }
-
-    function addMemberToSquad(select, mId, mJob, tabId) {
-        let sqId = select.value; if(!sqId) return;
-        activityData[tabId][sqId].push({ id: mId, job: mJob });
-        renderSquadMembers(tabId, sqId, tabId + "_standby"); refreshStandbyList(tabId + "_standby", tabId); saveLocalOnly();
+    function insertMemberRow(id, job, force, note) {
+        let tbody = document.getElementById("guildTable").querySelector("tbody"); 
+        let row = tbody.insertRow(); row.setAttribute("data-job", job); 
+        let jobColor = JOB_DATA[job] || "#fff";
+        row.innerHTML = `<td contenteditable="true" class="editable" onfocus="this.dataset.old = this.innerText" onblur="updateMemberId(this)">${id}</td><td class="job-text" style="color: ${jobColor};">${job}</td><td class="center-col"><input type="number" class="force-input" value="${force}" onchange="markDirty()"></td><td contenteditable="true" class="editable" onblur="markDirty()">${note}</td><td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this); markDirty()">移除</button></td>`;
+        updateMemberStats(); // 更新統計
     }
     
-    function renderSquadMembers(tabId, sqId, listId) {
-        let squadDiv = document.getElementById(sqId); if(!squadDiv) return;
-        let listDiv = squadDiv.querySelector(".squad-list"); listDiv.innerHTML = "";
-        let members = activityData[tabId][sqId];
-        members.forEach((m, index) => {
-            let jobColor = JOB_DATA[m.job] || "#fff";
-            let row = document.createElement("div"); row.className = "squad-member";
-            let span = document.createElement("span");
-            span.innerHTML = `<span style="color:${jobColor}; font-weight:bold;">${m.job}</span> `;
-            let idText = document.createTextNode(" " + m.id);
-            span.appendChild(idText);
-            let btn = document.createElement("span");
-            btn.className = "remove-icon";
-            btn.innerText = "x";
-            btn.onclick = function() { removeMemberFromSquad(tabId, sqId, index); };
-            row.appendChild(span);
-            row.appendChild(btn);
-            listDiv.appendChild(row);
-        });
-    }
-
-    function removeMemberFromSquad(tabId, sqId, index) { 
-        activityData[tabId][sqId].splice(index, 1); renderSquadMembers(tabId, sqId, tabId + "_standby"); refreshStandbyList(tabId + "_standby", tabId); saveLocalOnly(); 
-    }
-    function removeSquad(tabId, sqId) { 
-        if(!confirm("刪除此小隊？")) return; delete activityData[tabId][sqId]; document.getElementById(sqId).remove(); refreshStandbyList(tabId + "_standby", tabId); saveLocalOnly(); 
-    }
-
     function getMembersFromTable() {
         let members = [];
         let rows = document.getElementById("guildTable").querySelectorAll("tbody tr");
@@ -478,152 +739,99 @@
         });
         return members;
     }
-
-    function saveLocalOnly() {
-        let members = getMembersFromTable();
-        saveToLocalStorage(members);
+    
+    function addMember() { 
+        let id = document.getElementById("mID").value.trim(); 
+        let job = document.getElementById("mJob").value; 
+        let force = document.getElementById("mForce").value; 
+        let note = document.getElementById("mNote").value; 
+        if(id === "") return alert("請輸入 ID"); 
+        let rows = document.getElementById("guildTable").querySelectorAll("tbody tr");
+        for (let row of rows) { if (row.cells[0].innerText === id) { alert("錯誤：該 ID 已存在！"); return; } }
+        insertMemberRow(id, job, force, note); 
+        document.getElementById("mID").value = ""; filterByJob('All'); markDirty(); updateLeaveMemberSelect();
     }
 
-    function saveAllData() {
-        let members = getMembersFromTable();
-        saveToLocalStorage(members); 
-        let saveBtn = document.getElementById("saveBtn");
-        let originalText = saveBtn.innerText;
-        saveBtn.innerText = "上傳中...";
-        saveBtn.disabled = true;
-
-        fetch(DATA_SOURCE_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                type: "SAVE_MEMBERS", 
-                members: members
-            })
-        }).then(() => {
-            setTimeout(() => {
-                saveBtn.innerText = "存檔完成";
-                setTimeout(() => { saveBtn.innerText = originalText; saveBtn.disabled = false; }, 1000);
-            }, 500);
-        }).catch(err => {
-            console.error(err);
-            alert("雲端存檔失敗，請檢查網址。");
-            saveBtn.innerText = originalText;
-            saveBtn.disabled = false;
-        });
-    }
-
-    function saveToLocalStorage(members) {
-        let squadNames = {};
-        activityTabs.forEach(tab => {
-            squadNames[tab.id] = {};
-            let container = document.getElementById(tab.id + "_squads");
-            if(container) {
-                let inputs = container.querySelectorAll(".squad-name-input");
-                inputs.forEach(inp => {
-                    let sqId = inp.closest(".squad-box").id;
-                    squadNames[tab.id][sqId] = inp.value;
-                });
+    function updateMemberId(cell) {
+        let oldId = cell.dataset.old; let newId = cell.innerText.trim();
+        if (oldId === newId) return; 
+        if (!oldId) { markDirty(); return; }
+        updateLeaveMemberSelect();
+        for (let tabId in activityData) {
+            for (let sqId in activityData[tabId]) {
+                let squad = activityData[tabId][sqId];
+                squad.forEach(member => { if (member.id === oldId) { member.id = newId; } });
             }
-        });
-        localStorage.setItem("ro_squad_names_v6", JSON.stringify(squadNames)); 
-        let saveData = { members: members, activityTabs: activityTabs, activityData: activityData };
-        localStorage.setItem("ro_guild_system_v3", JSON.stringify(saveData)); 
+        }
+        markDirty(); 
     }
     
-    function loadAllData() {
-        let json = localStorage.getItem("ro_guild_system_v3");
-        if (!json) json = localStorage.getItem("ro_guild_system_v1");
+    function deleteRow(btn) { 
+        let row = btn.closest("tr");
+        let id = row.cells[0].innerText.trim();
+        for (let tabId in activityData) {
+            for (let sqId in activityData[tabId]) {
+                activityData[tabId][sqId] = activityData[tabId][sqId].filter(m => m.id !== id);
+            }
+        }
+        row.remove(); updateLeaveMemberSelect(); updateMemberStats(); // 更新統計
         
-        if (json) {
-            let data = JSON.parse(json);
-            activityTabs = data.activityTabs || [];
-            activityData = data.activityData || {};
-            activityTabs.forEach(tab => createTabDOM(tab.id, tab.name));
-            
-            // 嘗試讀取雲端成員，失敗則用本地
-            fetch(DATA_SOURCE_URL + "?type=members")
-                .then(r => r.json())
-                .then(cloudMembers => {
-                    if (cloudMembers && Array.isArray(cloudMembers) && cloudMembers.length > 0) {
-                        renderMemberTable(cloudMembers);
-                    } else if (data.members) {
-                        renderMemberTable(data.members);
-                    }
-                })
-                .catch(err => {
-                    if(data.members) renderMemberTable(data.members);
-                });
-
-        } else {
-            insertMemberRow("SkyWalker", "騎士", 1, "主坦");
-            createNewActivityTab("城戰配置");
+        let activeTab = document.querySelector(".tab-content.active");
+        if (activeTab && activeTab.id.startsWith("act_")) { 
+            let standbyId = activeTab.id + "_standby"; refreshStandbyList(standbyId, activeTab.id);
+            for(let sqId in activityData[activeTab.id]) { renderSquadMembers(activeTab.id, sqId, standbyId); }
         }
     }
 
-    function renderMemberTable(members) {
-        let tbody = document.getElementById("guildTable").querySelector("tbody");
-        tbody.innerHTML = "";
-        members.forEach(m => {
-            let forceVal = (m.force === "是") ? 1 : (m.force === "否" ? 0 : m.force);
-            insertMemberRow(m.id, m.job, forceVal, m.note);
-        });
-        updateLeaveMemberSelect();
-    }
-
-    function fetchLeaveData() {
-        const loading = document.getElementById("loadingBox"); 
-        const errorBox = document.getElementById("errorBox"); 
-        const dashboard = document.getElementById("leaveDashboard");
-        loading.style.display = "block"; errorBox.style.display = "none";
-        
-        fetch(DATA_SOURCE_URL).then(r => r.json()).then(data => {
-            loading.style.display = "none";
-            rawLeaveData = data; 
-            processLeaveData(data); 
-            renderLeaveDashboard(); 
-            renderRawTable(data); 
-            dashboard.style.display = "flex"; 
-        }).catch(err => { 
-            loading.style.display = "none"; 
-            errorBox.style.display = "block"; 
-        });
-    }
-    
     function processLeaveData(data) {
         leavesByDate = {};
         if(!Array.isArray(data)) return;
         data.forEach(row => {
-            // row: [timestamp, name, timeStr, reason]
-            let name = row[1]; let timeStr = row[2]; let reason = row[3]; 
-            // 簡單處理逗號分隔的多個日期
-            let dates = timeStr.split(/,|，/);
-            dates.forEach(d => {
-                let dateKey = d.trim();
-                if(dateKey) {
-                    if(!leavesByDate[dateKey]) leavesByDate[dateKey] = [];
-                    let memberInfo = getMemberInfo(name);
-                    leavesByDate[dateKey].push({ name: name, reason: reason, job: memberInfo.job || "未知", force: memberInfo.force || "", note: memberInfo.note || "" });
-                }
+            if (!row || row.length < 4) return;
+            let name = String(row[1]).trim();
+            let timeStr = row[2] ? String(row[2]) : "";
+            let reason = row[3] || "";
+            let originalTimeStr = timeStr; 
+
+            if (!timeStr) return;
+            let dates = timeStr.split(/,|，/).map(d => d.trim()).filter(d => d.length > 0);
+            dates.forEach(dateKey => {
+                if(!leavesByDate[dateKey]) leavesByDate[dateKey] = [];
+                let memberInfo = getMemberInfo(name);
+                leavesByDate[dateKey].push({ 
+                    name: name, reason: reason, 
+                    job: memberInfo.job || "未知", force: memberInfo.force || "", 
+                    note: memberInfo.note || "", originalTime: originalTimeStr 
+                });
             });
         });
     }
-    
-    function getMemberInfo(name) {
-        let rows = document.getElementById("guildTable").querySelectorAll("tbody tr");
-        for(let r of rows) {
-            if (r.cells[0].innerText.trim() === name.trim()) {
-                let forceInput = r.querySelector(".force-input");
-                return { job: r.cells[1].innerText, force: forceInput ? forceInput.value : "", note: r.cells[3].innerText };
-            }
-        }
-        return { job: null, force: null, note: null };
+
+    function renderRawTable(data) {
+        let tbody = document.getElementById("leaveTable").querySelector("tbody"); tbody.innerHTML = "";
+        if(!Array.isArray(data)) return;
+        data.forEach((row) => { 
+            let tr = tbody.insertRow(); 
+            let dateStr = "N/A";
+            try {
+                let d = new Date(row[0]);
+                if (!isNaN(d.getTime())) dateStr = d.toLocaleDateString() + " " + d.toLocaleTimeString();
+                else dateStr = row[0];
+            } catch(e) { dateStr = row[0]; }
+            tr.innerHTML = `<td class="time-cell">${dateStr}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[3]}</td>`; 
+        });
     }
-    
+
     function renderLeaveDashboard() {
         const listContainer = document.getElementById("leaveDateList"); listContainer.innerHTML = "";
+        const detailContainer = document.getElementById("leaveDetailContainer"); 
         let sortedDates = Object.keys(leavesByDate).sort();
-        if (sortedDates.length === 0) { listContainer.innerHTML = "<div style='padding:10px; color:#aaa;'>目前無假單</div>"; return; }
+        if (sortedDates.length === 0) { 
+            listContainer.innerHTML = "<div style='padding:10px; color:#aaa; text-align:center;'>目前無假單</div>"; 
+            detailContainer.innerHTML = "<div style='padding:20px; color:#aaa; text-align:center;'>無資料顯示</div>";
+            document.getElementById("selectedDateTitle").innerText = "假單儀表板";
+            return; 
+        }
         sortedDates.forEach(date => {
             let count = leavesByDate[date].length;
             let btn = document.createElement("div"); btn.className = "date-btn";
@@ -644,27 +852,53 @@
             let jobColor = JOB_DATA[item.job] || "#777"; let textColor = (item.job === "未知") ? "#aaa" : "#000";
             let forceBadge = (item.force && item.force !== "0") ? `<span class="leave-force">★戰力:${item.force}</span>` : "";
             let card = document.createElement("div"); card.className = "leave-card-v4"; card.style.borderLeftColor = jobColor;
-            card.innerHTML = `<div style="display:flex; align-items:center;"><span class="leave-job-badge" style="background:${jobColor}; color:${textColor};">${item.job}</span><span class="leave-name">${item.name}</span>${forceBadge}</div><span class="leave-reason">${item.reason}</span>`;
+            let contentDiv = document.createElement("div");
+            contentDiv.style.flex = "1"; contentDiv.style.display = "flex"; contentDiv.style.alignItems = "center";
+            contentDiv.innerHTML = `<span class="leave-job-badge" style="background:${jobColor}; color:${textColor};">${item.job}</span><span class="leave-name">${item.name}</span>${forceBadge} <span class="leave-reason" style="margin-left:15px;">${item.reason}</span>`;
+            let deleteBtn = document.createElement("button");
+            deleteBtn.className = "btn-card-delete"; deleteBtn.innerText = "刪除";
+            deleteBtn.onclick = function() { deleteLeave(item.name, item.originalTime, item.reason, this); };
+            card.appendChild(contentDiv); card.appendChild(deleteBtn);
             container.appendChild(card);
         });
     }
-    
-    function toggleRawLeaveData() { let div = document.getElementById("rawLeaveTableContainer"); div.style.display = (div.style.display === "none") ? "block" : "none"; }
-    
-    function renderRawTable(data) {
-        let tbody = document.getElementById("leaveTable").querySelector("tbody"); tbody.innerHTML = "";
-        if(!Array.isArray(data)) return;
-        data.forEach((row, index) => { 
-            let tr = tbody.insertRow(); 
-            // row[0] 是時間, row[1] ID, row[2] 請假時間, row[3] 事由
-            tr.innerHTML = `<td class="time-cell">${row[0]}</td><td>${row[1]}</td><td>${row[2]}</td><td>${row[3]}</td>`; 
+
+    function getMemberInfo(name) {
+        let rows = document.getElementById("guildTable").querySelectorAll("tbody tr");
+        let searchName = name.trim().toLowerCase();
+        for(let r of rows) {
+            let rowName = r.cells[0].innerText.trim().toLowerCase();
+            if (rowName === searchName) {
+                let forceInput = r.querySelector(".force-input");
+                return { job: r.cells[1].innerText, force: forceInput ? forceInput.value : "", note: r.cells[3].innerText };
+            }
+        }
+        return { job: null, force: null, note: null };
+    }
+
+    function updateLeaveMemberSelect() {
+        let select = document.getElementById("leaveMemberSelect");
+        select.innerHTML = "";
+        let members = getMembersFromTable();
+        if (members.length === 0) { select.innerHTML = "<option>無成員資料</option>"; return; }
+        members.forEach(m => {
+            let op = document.createElement("option"); op.value = m.id; op.text = m.id + " (" + m.job + ")"; select.appendChild(op);
         });
     }
 
     function initJobUI() {
-        const select = document.getElementById("mJob"); const filterContainer = document.getElementById("jobFilterContainer"); select.innerHTML = ""; 
+        const select = document.getElementById("mJob"); const qSelect = document.getElementById("qJob");
+        const filterContainer = document.getElementById("jobFilterContainer"); 
+        select.innerHTML = ""; qSelect.innerHTML = "";
         for (let job in JOB_DATA) {
-            let color = JOB_DATA[job]; let option = document.createElement("option"); option.value = job; option.text = job; option.style.color = color; option.style.fontWeight = "bold"; select.appendChild(option);
+            let color = JOB_DATA[job]; 
+            // 成員頁面選單
+            let option = document.createElement("option"); option.value = job; option.text = job; option.style.color = color; option.style.fontWeight = "bold"; 
+            select.appendChild(option);
+            // 排隊頁面選單 (複製一份)
+            let qOption = option.cloneNode(true);
+            qSelect.appendChild(qOption);
+
             let btn = document.createElement("button"); btn.className = "filter-btn"; btn.innerText = job; btn.style.borderColor = color;
             btn.onclick = function() { filterByJob(job); }; filterContainer.appendChild(btn);
         }
@@ -675,67 +909,8 @@
         btns.forEach(b => { if (b.innerText === targetJob || (targetJob === 'All' && b.innerText === '全部顯示')) { b.classList.add("active"); if(targetJob !== 'All') { b.style.background = JOB_DATA[targetJob]; b.style.color = "#000"; } } else { b.classList.remove("active"); b.style.background = "#222"; b.style.color = "#888"; } });
         let trs = document.getElementById("guildTable").querySelectorAll("tbody tr"); trs.forEach(tr => { let rowJob = tr.getAttribute("data-job"); tr.style.display = (targetJob === 'All' || rowJob === targetJob) ? "" : "none"; });
     }
-    
-    function addMember() { 
-        let id = document.getElementById("mID").value.trim(); 
-        let job = document.getElementById("mJob").value; 
-        let force = document.getElementById("mForce").value; 
-        let note = document.getElementById("mNote").value; 
-        if(id === "") return alert("請輸入 ID"); 
-        let rows = document.getElementById("guildTable").querySelectorAll("tbody tr");
-        for (let row of rows) { if (row.cells[0].innerText === id) { alert("錯誤：該 ID 已存在！"); return; } }
-        insertMemberRow(id, job, force, note); 
-        document.getElementById("mID").value = ""; 
-        filterByJob('All'); 
-        saveLocalOnly(); 
-        updateLeaveMemberSelect();
-    }
-    
-    function insertMemberRow(id, job, force, note) {
-        let tbody = document.getElementById("guildTable").querySelector("tbody"); let row = tbody.insertRow(); row.setAttribute("data-job", job); let jobColor = JOB_DATA[job] || "#fff";
-        row.innerHTML = `<td contenteditable="true" class="editable" onfocus="this.dataset.old = this.innerText" onblur="updateMemberId(this)">${id}</td><td class="job-text" style="color: ${jobColor};">${job}</td><td class="center-col"><input type="number" class="force-input" value="${force}" onchange="saveLocalOnly()"></td><td contenteditable="true" class="editable" onblur="saveLocalOnly()">${note}</td><td class="center-col"><button class="ro-btn btn-delete" onclick="deleteRow(this); saveLocalOnly()">移除</button></td>`;
-    }
-    
-    function updateMemberId(cell) {
-        let oldId = cell.dataset.old; let newId = cell.innerText.trim();
-        if (oldId === newId) return; 
-        if (!oldId) { saveLocalOnly(); return; }
-        // 更新下拉選單
-        updateLeaveMemberSelect();
-        // 更新小隊資料
-        for (let tabId in activityData) {
-            for (let sqId in activityData[tabId]) {
-                let squad = activityData[tabId][sqId];
-                squad.forEach(member => { if (member.id === oldId) { member.id = newId; } });
-            }
-        }
-        let activeTab = document.querySelector(".tab-content.active");
-        if (activeTab && activeTab.id.startsWith("act_")) { openTab(activeTab.id); }
-        saveLocalOnly(); 
-    }
-    
-    function deleteRow(btn) { 
-        let row = btn.closest("tr");
-        let id = row.cells[0].innerText.trim();
-        for (let tabId in activityData) {
-            for (let sqId in activityData[tabId]) {
-                activityData[tabId][sqId] = activityData[tabId][sqId].filter(m => m.id !== id);
-            }
-        }
-        row.remove(); 
-        updateLeaveMemberSelect();
-        let activeTab = document.querySelector(".tab-content.active");
-        if (activeTab && activeTab.id.startsWith("act_")) { 
-            let standbyId = activeTab.id + "_standby";
-            refreshStandbyList(standbyId, activeTab.id);
-            let squadContainer = document.getElementById(activeTab.id + "_squads");
-            if(squadContainer) {
-                 for(let sqId in activityData[activeTab.id]) {
-                     renderSquadMembers(activeTab.id, sqId, standbyId);
-                 }
-            }
-        }
-    }
+
+    function toggleRawLeaveData() { let div = document.getElementById("rawLeaveTableContainer"); div.style.display = (div.style.display === "none") ? "block" : "none"; }
 
     function sortTable(tableId, n, isNumber = false) {
         var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0; 
